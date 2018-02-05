@@ -124,6 +124,7 @@ GameObject:
   - component: {fileID: 1310466035}
   - component: {fileID: 1310466034}
   - component: {fileID: 1310466033}
+  - component: {fileID: 1310466037}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -194,6 +195,22 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1310466037
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 1310466032}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1c627a81aa5fa9449957df63c1fc158c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  heightMap: {fileID: 2800000, guid: 45e64b3e874365949ae291ac5232e39c, type: 3}
+  terrainHeight: 10
+  terrainSize: 64
+  terrainMat: {fileID: 2100000, guid: b50516405a76f954aaca83efa3b9dfd0, type: 2}
+  grassMat: {fileID: 2100000, guid: 6743cdcd44ca4f1489dd4e35a3b692c2, type: 2}
 --- !u!1 &1873715858
 GameObject:
   m_ObjectHideFlags: 0
