@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class GrassGenerator : MonoBehaviour {
     public Texture2D heightMap;
-    public float terrainHeight;
+    public float terrainHeight = 5f;
     public int terrainSize = 250;
     public Material terrainMat;
     public Material grassMat;
@@ -14,8 +14,10 @@ public class GrassGenerator : MonoBehaviour {
     void Start () {
         random = new System.Random();
         GenerateTerrain();
-        GenerateField(30, 50);
+        //GeneratePatch(30, 50);
     }
+
+    
 	
 	void Update () {
 		
@@ -28,17 +30,17 @@ public class GrassGenerator : MonoBehaviour {
         List<Vector3> verts = new List<Vector3>();
         List<int> tris = new List<int>();
 
-        for (int i = 0; i < this.terrainSize; i++) {
-            for (int j = 0; j < this.terrainSize; j++) {
-                verts.Add(new Vector3(i, heightMap.GetPixel(i, j).grayscale * this.terrainHeight, j));
+        for (int i = 0; i < heightMap.width; i++) {
+            for (int j = 0; j < heightMap.height; j++) {
+                verts.Add(new Vector3(i, heightMap.GetPixel(i, j).grayscale * terrainHeight, j));
                 if (i == 0 || j == 0)
                     continue;
-                tris.Add(terrainSize * i + j);
-                tris.Add(terrainSize * i + j - 1);
-                tris.Add(terrainSize * (i - 1) + j - 1);
-                tris.Add(terrainSize * (i - 1) + j - 1);
-                tris.Add(terrainSize * (i - 1) + j);
-                tris.Add(terrainSize * i + j);
+                tris.Add(heightMap.width * i + j);
+                tris.Add(heightMap.width * i + j - 1);
+                tris.Add(heightMap.width * (i - 1) + j - 1);
+                tris.Add(heightMap.width * (i - 1) + j - 1);
+                tris.Add(heightMap.width * (i - 1) + j);
+                tris.Add(heightMap.width * i + j);
             }
         }
 
@@ -48,7 +50,7 @@ public class GrassGenerator : MonoBehaviour {
             uvs[i] = new Vector2(verts[i].x, verts[i].z);
         }
 
-        GameObject plane = new GameObject("groundPlane");
+        GameObject plane = new GameObject("ground");
         plane.AddComponent<MeshFilter>();
         MeshRenderer renderer = plane.AddComponent<MeshRenderer>();
         renderer.sharedMaterial = terrainMat;
@@ -68,7 +70,7 @@ public class GrassGenerator : MonoBehaviour {
     /// </summary>
     /// <param name="grassPatchRowCount"></param>
     /// <param name="grassCountPerPatch"></param>
-    private void GenerateField(int grassPatchRowCount, int grassCountPerPatch) {
+    private void GeneratePatch(int grassPatchRowCount, int grassCountPerPatch) {
         List<int> indices = new List<int>();
         for (int i = 0; i < 65000; i++) {
             indices.Add(i);

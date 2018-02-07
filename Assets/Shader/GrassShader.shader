@@ -78,7 +78,7 @@
             void geom(point v2g points[1], inout TriangleStream<g2f> triStream)
             {
 
-                float4 root = points[0].pos;
+                float4 root = points[0].pos;//点的位置-根
 
                 const int vertexCount = 12;
 
