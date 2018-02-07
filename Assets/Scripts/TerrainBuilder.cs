@@ -9,6 +9,9 @@ public class TerrainBuilder : MonoBehaviour {
     public int terrainSizeZ = 128;
     public Material terrainMat;
 
+    public Texture2D grassDensityMap;
+    public float grassHeight = 2f;
+
     public void BuildTerrain() {
         //重新生成地形前需要清除之前的地形
         MeshFilter f = GetComponent<MeshFilter>();
@@ -58,5 +61,9 @@ public class TerrainBuilder : MonoBehaviour {
         //normals
         terrainMesh.RecalculateNormals();
         filter.mesh = terrainMesh;
+    }
+
+    public void RaiseGrass() {
+
     }
 }
