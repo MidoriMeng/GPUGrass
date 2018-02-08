@@ -17,7 +17,8 @@ public class TerrainBuilderEditor : Editor {
         script.terrainHeight = EditorGUILayout.FloatField("Terrain Height", script.terrainHeight);
         script.terrainSizeX = EditorGUILayout.IntField("Terrain Size X", script.terrainSizeX);
         script.terrainSizeZ = EditorGUILayout.IntField("Terrain Size X", script.terrainSizeZ);
-        script.terrainMat= (Material)EditorGUILayout.ObjectField("Terrain Material", script.terrainMat, typeof(Material), false);
+        script.terrainMat= (Material)EditorGUILayout.ObjectField(
+            "Terrain Material", script.terrainMat, typeof(Material), false);
         if (GUILayout.Button("Build Terrain")) {
             script.BuildTerrain();
         }
@@ -27,6 +28,13 @@ public class TerrainBuilderEditor : Editor {
         //grass options
         EditorGUILayout.LabelField("Grass Options", EditorStyles.boldLabel);
         script.grassDensityMap = (Texture2D)EditorGUILayout.ObjectField("Density Map", script.grassDensityMap, typeof(Texture2D), false);
-        //grassheight
+        script.grassHeight = EditorGUILayout.FloatField("Grass Height", script.grassHeight);
+        script.patchSize = EditorGUILayout.IntField("Patch Size", script.patchSize);
+        script.grassAmountPerPatch = EditorGUILayout.IntField("Grass Amount Per Patch", script.grassAmountPerPatch);
+        script.grassMaterial = (Material)EditorGUILayout.ObjectField(
+            "Grass Material", script.grassMaterial, typeof(Material), false);
+        if (GUILayout.Button("Build Terrain")) {
+            script.RaiseGrass();
+        }
     }
 }
