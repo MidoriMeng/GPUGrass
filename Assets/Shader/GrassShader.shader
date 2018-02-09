@@ -124,7 +124,7 @@
                         currentVertexHeight = currentV * _Height;
                     }
 
-                    float2 wind = float2(sin(_Time.x * UNITY_PI * 5), sin(_Time.x * UNITY_PI * 5));
+                    /*float2 wind = float2(sin(_Time.x * UNITY_PI * 5), sin(_Time.x * UNITY_PI * 5));
                     wind.x += (sin(_Time.x + root.x / 25) + sin((_Time.x + root.x / 15) + 50)) * 0.5;
                     wind.y += cos(_Time.x + root.z / 80);
                     wind *= lerp(0.7, 1.0, 1.0 - random);
@@ -145,7 +145,7 @@
                     float windForce = length(wind);
 
                     v[i].pos.xz += wind.xy * windCoEff;
-                    v[i].pos.y -= windForce * windCoEff * 0.8;
+                    v[i].pos.y -= windForce * windCoEff * 0.8;*/
 
                     v[i].pos = UnityObjectToClipPos(v[i].pos);
 
