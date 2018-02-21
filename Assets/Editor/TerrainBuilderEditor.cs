@@ -34,7 +34,8 @@ public class TerrainBuilderEditor : Editor {
         script.grassMaterial = (Material)EditorGUILayout.ObjectField(
             "Grass Material", script.grassMaterial, typeof(Material), false);
         if (GUILayout.Button("Build Grass")) {
-            script.PregenerateGrass();
+            //script.PregenerateGrass();
+            script.SeperateTerrain();
         }
     }
 }
