@@ -17,6 +17,7 @@ public class TerrainBuilder : MonoBehaviour {
     public int grassAmountPerPatch;
     public int pregenerateGrassAmount = 1024;
     public Material grassMaterial;
+    public float patchExpansion = 2f;
     private List<float> directions;//随机方向，[0,1]
     private List<float> grassHeights;
     private List<float> grassDensityIndexs;
@@ -113,21 +114,31 @@ public class TerrainBuilder : MonoBehaviour {
         return new Vector3(i * patchSize, 0, j * patchSize);
     }
 
-    public void SeperateTerrain() {
+    public void calculateTileToRender() {
         //获取相机视锥体在世界坐标系下的包围盒
         Camera camera = Camera.main;
-        Plane[] camFrustumPlanes = GeometryUtility.CalculateFrustumPlanes(camera);
-        Vector3[] frustumCorners = new Vector3[4];//临时变量
+        Vector3[] frustumCorners = new Vector3[4];//临时变量，存本地坐标下相机frustum五个角
         camera.CalculateFrustumCorners(new Rect(0, 0, 1, 1), camera.farClipPlane, camera.stereoActiveEye, frustumCorners);
-        List<Vector3> frustumBoundPoints = new List<Vector3>();//相机frustum五个角
+        List<Vector3> frustumBoundPoints = new List<Vector3>();//临时变量，存世界坐标下的五个角
         for (int i = 0; i < 4; i++) {
             Vector3 worldSpaceCorner = camera.transform.TransformVector(frustumCorners[i]);
             frustumBoundPoints.Add(worldSpaceCorner);
         }
         frustumBoundPoints.Add(camera.transform.position);
-        Bounds camBound = new Bounds();//相机包围盒
-        frustumBoundPoints.ForEach((point) => { camBound.Encapsulate(point); });
+        //视锥体在xz平面上的三角形
         Vector3[] frustumTriangle = new Vector3[] { frustumBoundPoints[0], frustumBoundPoints[2], frustumBoundPoints[4] };
+        //为了显示效果，边界向外扩张两个patchSize大小
+        Vector3 triangleCenter = (frustumTriangle[0] + frustumTriangle[1] + frustumTriangle[2]) / 3f;
+        frustumTriangle[0] += patchExpansion * patchSize * (frustumTriangle[0] - triangleCenter) 
+            / (frustumTriangle[0] - triangleCenter).magnitude;
+        frustumTriangle[1] += patchExpansion * patchSize * (frustumTriangle[1] - triangleCenter)
+            / (frustumTriangle[1] - triangleCenter).magnitude;
+        frustumTriangle[2] += patchExpansion * patchSize * (frustumTriangle[2] - triangleCenter)
+            / (frustumTriangle[2] - triangleCenter).magnitude;
+        Bounds camBound = new Bounds();//相机包围盒
+        for (int i = 0; i < frustumTriangle.Length; i++) {
+            camBound.Encapsulate(frustumTriangle[i]);
+        }
 
         //确定检测范围
         //包围盒内的tile依次与相机求交，获得需要渲染的tile，储存在tilesToRender
@@ -142,6 +153,7 @@ public class TerrainBuilder : MonoBehaviour {
         for (int i = minTileX; i <= maxTileX; i++, testBound.center += new Vector3(patchSize, 0, 0)) {
             //在z方向上先从min向max找到第一个相交patch：minZ，
             int minZ = -1;
+            bool finded = false;
             for (int j = minTileZ; j <= maxTileZ; j++, testBound.center += new Vector3(0, 0, patchSize)) {
                 if (PointInTriangle(frustumTriangle[0], frustumTriangle[1], frustumTriangle[2], testBound.center)) {
                     /*Vector3[] boundCorners = new Vector3[] {
@@ -149,12 +161,15 @@ public class TerrainBuilder : MonoBehaviour {
                         testBound.min+new Vector3(testBound.size.x,0,0),
                         testBound.min+new Vector3(0,0,testBound.size.z)
                     };*/
+                    finded = true;
                     minZ = j;
                     break;
                 }
             }
-            if (minZ == -1)//正向没找到，下一个。TODO：删掉，不应该有找不到的
+            if (!finded) {//正向没找到，下一个。TODO：删掉，不应该有找不到的
+                testBound.center = new Vector3(testBound.center.x, testBound.center.y, iterationStartZ);//z复位
                 continue;
+            }
             //再按反方向找第一个相交patch：maxZ，
             int maxZ = -1;
             float newZ = GetPatchPosition(minTileX, maxTileZ).z + 0.5f * patchSize;
