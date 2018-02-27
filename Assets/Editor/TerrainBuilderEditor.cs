@@ -15,8 +15,7 @@ public class TerrainBuilderEditor : Editor {
         EditorGUILayout.LabelField("Terrain Generation", EditorStyles.boldLabel);
         script.heightMap = (Texture2D)EditorGUILayout.ObjectField("Height Map", script.heightMap, typeof(Texture2D), false);
         script.terrainHeight = EditorGUILayout.FloatField("Terrain Height", script.terrainHeight);
-        script.terrainSizeX = EditorGUILayout.IntField("Terrain Size X", script.terrainSizeX);
-        script.terrainSizeZ = EditorGUILayout.IntField("Terrain Size X", script.terrainSizeZ);
+        script.terrainScale = EditorGUILayout.FloatField("Terrain Scale", script.terrainScale);
         script.terrainMat= (Material)EditorGUILayout.ObjectField(
             "Terrain Material", script.terrainMat, typeof(Material), false);
         if (GUILayout.Button("Build Terrain")) {
@@ -30,11 +29,11 @@ public class TerrainBuilderEditor : Editor {
         script.grassDensityMap = (Texture2D)EditorGUILayout.ObjectField("Density Map", script.grassDensityMap, typeof(Texture2D), false);
         script.grassHeightMax = EditorGUILayout.FloatField("Grass Height", script.grassHeightMax);
         script.patchSize = EditorGUILayout.IntField("Patch Size", script.patchSize);
-        script.grassAmountPerPatch = EditorGUILayout.IntField("Grass Amount Per Patch", script.grassAmountPerPatch);
+        script.grassAmountPerTile = EditorGUILayout.IntField("Grass Amount Per Tile", script.grassAmountPerTile);
         script.grassMaterial = (Material)EditorGUILayout.ObjectField(
             "Grass Material", script.grassMaterial, typeof(Material), false);
         if (GUILayout.Button("Build Grass")) {
-            //script.PregenerateGrass();
+            script.PregenerateGrass();
             script.calculateTileToRender();
         }
     }
