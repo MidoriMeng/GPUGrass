@@ -17,20 +17,18 @@ public class TerrainBuilder : MonoBehaviour {
     public int pregenerateGrassAmount = 1024;//预生成Patch草体总长度
     public Material grassMaterial;
     public float patchExpansion = 2f;//实际渲染时比视锥体范围扩展的距离，为了保证边界渲染的质量且减少视锥体裁剪的频率
-    private List<float> directions;//随机方向，[0,1]
     private List<float> grassHeights;
     private List<float> grassDensityIndexes;
     private List<Vector3> grassRoots;//草的位置
-    private Transform grassLayer;//草体模型所在gameObject
-    private TileBuffer []tileData;
+    private List<Vector4> grassRootsDir;//草的位置+随机方向，[0,1]
+    private GameObject grassLayer;//草体模型所在gameObject
 
     private List<Vector2Int> tilesToRender;
 
-    public struct TileBuffer {
-        public Vector3 worldCoordinate;
-        public Vector3 heightDelta;
-        public int startIndexAtPatch;
-    };
+    /*public struct TileBuffer {
+        public Vector4 worldCoordinateStartIndex;//xyz:world coordinate, w:start index
+        public Vector4 heightDelta;
+    };*/
 
     /// <summary>
     /// 根据指定的高度图生成地面网格，将地表信息存储到tilebuffer
@@ -87,12 +85,13 @@ public class TerrainBuilder : MonoBehaviour {
     }
 
     public void PregenerateGrass() {
+        grassLayer = GameObject.Find("GrassLayer");
         if (grassLayer)
-            DestroyImmediate(grassLayer.gameObject);
+            DestroyImmediate(grassLayer);
         Vector3Int startPosition = Vector3Int.zero;//待定
         System.Random random = new System.Random();
         grassRoots = new List<Vector3>();
-        directions = new List<float>();
+        grassRootsDir = new List<Vector4>();
         grassHeights = new List<float>();
         grassDensityIndexes = new List<float>();
 
@@ -100,8 +99,10 @@ public class TerrainBuilder : MonoBehaviour {
         for (int i = 0; i < pregenerateGrassAmount; i++) {
             float deltaX = (float)random.NextDouble();
             float deltaZ = (float)random.NextDouble();
-            grassRoots.Add(new Vector3(deltaX * patchSize, 0, deltaZ * patchSize));
-            directions.Add((float)random.NextDouble());
+            Vector3 root = new Vector3(deltaX * patchSize, 0, deltaZ * patchSize);
+
+            grassRoots.Add(root);
+            grassRootsDir.Add(new Vector4(root.x, root.y, root.z, (float)random.NextDouble()));
             grassHeights.Add(grassHeightMax * 0.5f + grassHeightMax * 0.5f * (float)random.NextDouble());
             grassDensityIndexes.Add((float)random.NextDouble());
         }
@@ -113,12 +114,16 @@ public class TerrainBuilder : MonoBehaviour {
         for (int i = 0; i < indices.Length; i++)
             indices[i] = i;
         m.SetIndices(indices, MeshTopology.Points, 0);
-        grassLayer = (new GameObject("GrassLayer")).transform;
+        grassLayer = (new GameObject("GrassLayer"));
         grassLayer.transform.parent = gameObject.transform;
         MeshFilter filter = grassLayer.gameObject.AddComponent<MeshFilter>();
         MeshRenderer renderer = grassLayer.gameObject.AddComponent<MeshRenderer>();
         renderer.sharedMaterial = grassMaterial;
         filter.mesh = m;
+        //send to gpu
+        grassMaterial.SetVectorArray(Shader.PropertyToID("_grassRootsDir"), grassRootsDir);
+        grassMaterial.SetFloatArray(Shader.PropertyToID("_grassHeights"), grassHeights);
+        grassMaterial.SetFloatArray(Shader.PropertyToID("_grassDensityIndexes"), grassDensityIndexes);
     }
 
 
@@ -137,7 +142,7 @@ public class TerrainBuilder : MonoBehaviour {
         Vector3[] frustumTriangle = new Vector3[] { frustumBoundPoints[0], frustumBoundPoints[2], frustumBoundPoints[4] };
         //为了显示效果，边界向外扩张两个patchSize大小
         Vector3 triangleCenter = (frustumTriangle[0] + frustumTriangle[1] + frustumTriangle[2]) / 3f;
-        frustumTriangle[0] += patchExpansion * patchSize * (frustumTriangle[0] - triangleCenter) 
+        frustumTriangle[0] += patchExpansion * patchSize * (frustumTriangle[0] - triangleCenter)
             / (frustumTriangle[0] - triangleCenter).magnitude;
         frustumTriangle[1] += patchExpansion * patchSize * (frustumTriangle[1] - triangleCenter)
             / (frustumTriangle[1] - triangleCenter).magnitude;
@@ -197,28 +202,93 @@ public class TerrainBuilder : MonoBehaviour {
                 Debug.LogError(">256, tileData buffer overflow");
             testBound.center = new Vector3(testBound.center.x, testBound.center.y, iterationStartZ);//z复位
         }
-
-        GenerateTileData();
     }
 
     void GenerateTileData() {
-        tileData = new TileBuffer[256];
+        //generate tile data
+        //TileBuffer[] tileData = new TileBuffer[256];
+        Vector4[] tileWorldCoordStartIndex = new Vector4[256];
+        Vector4[] tileHeightDelta = new Vector4[256];
         System.Random random = new System.Random();
+        MaterialPropertyBlock props = new MaterialPropertyBlock();
+
         for (int i = 0; i < tilesToRender.Count; i++) {
-            TileBuffer tempTile = new TileBuffer();
-            tempTile.worldCoordinate = GetTilePosition(tilesToRender[i]);
-            float originHeight = tempTile.worldCoordinate.y;
+            //TileBuffer tempTile = new TileBuffer();
+            Vector3 pos = GetTilePosition(tilesToRender[i]);
+            int index = (int)(random.NextDouble() * (pregenerateGrassAmount - grassAmountPerTile));
+            //tempTile.worldCoordinateStartIndex = new Vector4(pos.x, pos.y, pos.z, index);
+            //float originHeight = tempTile.worldCoordinateStartIndex.y;
             int x = tilesToRender[i].x, y = tilesToRender[i].y;
-            Debug.Log(x + "  " + y + "  " + vertices.Count);
-            tempTile.heightDelta = new Vector3(
+            /*tempTile.heightDelta = new Vector3(
                 vertices[heightMap.width * (x + 1) + y].y - originHeight,
                 vertices[heightMap.width * (x + 1) + y + 1].y - originHeight,
                 vertices[heightMap.width * x + y + 1].y - originHeight
+                );*/
+            //tileData[i] = tempTile;
+            tileWorldCoordStartIndex[i] = new Vector4(pos.x, pos.y, pos.z, index);
+            float originHeight = tileWorldCoordStartIndex[i].y;
+            tileHeightDelta[i] = new Vector4(
+                vertices[heightMap.width * (x + 1) + y].y - originHeight,
+                vertices[heightMap.width * (x + 1) + y + 1].y - originHeight,
+                vertices[heightMap.width * x + y + 1].y - originHeight,
+                0
                 );
-            tempTile.startIndexAtPatch = (int)(random.NextDouble() * (pregenerateGrassAmount - grassAmountPerTile));
-            tileData[i] = tempTile;
+
+            //send data to property block
+            props.SetVector("_tileWorldCoordStartIndex", new Vector4(pos.x, pos.y, pos.z, index));
+            props.SetVector("_tileHeightDelta", new Vector4(
+                vertices[heightMap.width * (x + 1) + y].y - originHeight,
+                vertices[heightMap.width * (x + 1) + y + 1].y - originHeight,
+                vertices[heightMap.width * x + y + 1].y - originHeight,
+                0
+                )
+            );
+
         }
+
+        //props.SetVectorArray(Shader.PropertyToID("_tileWorldCoordStartIndex"), tileWorldCoordStartIndex);
+        //props.SetVectorArray(Shader.PropertyToID("_tileHeightDelta"), tileHeightDelta);
     }
+
+    private void Start() {
+        BuildTerrain();
+        PregenerateGrass();
+        calculateTileToRender();
+        GenerateTileData();
+    }
+
+    private void Update() {
+        //render grass,TODO: LOD 64 32 16
+        Mesh grassTile = generateGrassTile(64);
+        var position = Vector3.zero;
+        var rotation = Quaternion.identity;
+        var scale = Vector3.one;
+        Matrix4x4[] matrices = new Matrix4x4[tilesToRender.Count];
+        for(int i = 0; i < matrices.Length; i++) {
+            position = GetTilePosition(tilesToRender[i]);
+            matrices[i] = Matrix4x4.TRS(position, rotation, scale);
+        }
+        Graphics.DrawMeshInstanced(grassTile, 0, grassMaterial, matrices);//TODO: Indirect?
+    }
+
+    /// <summary>
+    /// generate a mesh with numbers of points
+    /// </summary>
+    /// <param name="grassBladeCount"></param>
+    /// <returns></returns>
+    Mesh generateGrassTile(int grassBladeCount) {
+        Mesh result = new Mesh();
+        //set mesh vertices
+        result.vertices = new Vector3[grassBladeCount];
+        //set mesh indices
+        int[] indices = new int[grassBladeCount];
+        for (int i = 0; i < grassBladeCount; i++)
+            indices[i] = i;
+        result.SetIndices(indices, MeshTopology.Points, 0);
+
+        return result;
+    }
+
     /// <summary>
     /// xz平面中点p是否在abc构成的三角形内
     /// </summary>

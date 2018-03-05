@@ -26,7 +26,8 @@
             #pragma vertex vert
             #pragma fragment frag
             #pragma geometry geom
-            #include "UnityLightingCommon.cginc" // 用来处理光照的一些效果
+            #pragma multi_compile_instancing
+            #include "UnityLightingCommon.cginc"
 
             #pragma target 4.0
 
@@ -35,11 +36,17 @@
 
             float _Height;//草的高度
             float _Width;//草的宽度
+
+            float4 _grassRootsDir[1024];//TODO
+            float _grassHeights[1024];
+            float _grassDensityIndexes[1024];
+
             struct v2g
             {
                 float4 pos : SV_POSITION;
                 float3 norm : NORMAL;
                 float2 uv : TEXCOORD0;
+                UNITY_VERTEX_INPUT_INSTANCE_ID// necessary only if you want to access instanced properties in fragment Shader.
             };
 
             struct g2f
@@ -52,10 +59,17 @@
 
             static const float oscillateDelta = 0.05;
 
+            UNITY_INSTANCING_BUFFER_START(Props)
+                UNITY_DEFINE_INSTANCED_PROP(float4, _tileWorldCoordStartIndex)
+                UNITY_DEFINE_INSTANCED_PROP(float4, _tileHeightDelta)
+            UNITY_INSTANCING_BUFFER_END(Props)
 
             v2g vert(appdata_full v)
             {
                 v2g o;
+                UNITY_SETUP_INSTANCE_ID(v);
+                UNITY_TRANSFER_INSTANCE_ID(v, o);// necessary only if you want to access instanced properties in the fragment Shader.
+                //float4 worldCoordIndex = UNITY_ACCESS_INSTANCED_PROP(Props, _tileWorldCoordStartIndex);
                 o.pos = v.vertex;
                 o.norm = v.normal;
                 o.uv = v.texcoord;
@@ -186,6 +200,10 @@
 
                 light = ambient + diffuseLight + specularLight;
 
+
+#if defined(SHADER_API_PSSL)
+                return float4(1, 0, 0, 1);
+#endif
                 return float4(color.rgb * light, alpha.g);
             }
 
