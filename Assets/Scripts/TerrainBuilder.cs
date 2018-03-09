@@ -8,22 +8,9 @@ public class TerrainBuilder : MonoBehaviour {
     public float terrainHeight = 5f;
     public float terrainScale = 1f;
     public Material terrainMat;
-    private List<Vector3> vertices;
-    //grass
-    public Texture2D grassDensityMap;
-    public float grassHeightMax = 2f;
-    public int patchSize = 1;//Patch的长/宽
-    public int grassAmountPerTile;//实际渲染时每个Tile内最多的草叶数量
-    public int pregenerateGrassAmount = 1024;//预生成Patch草体总长度
-    public Material grassMaterial;
-    public float patchExpansion = 2f;//实际渲染时比视锥体范围扩展的距离，为了保证边界渲染的质量且减少视锥体裁剪的频率
-    private List<float> grassHeights;
-    private List<float> grassDensityIndexes;
-    private List<Vector3> grassRoots;//草的位置
-    private List<Vector4> grassRootsDir;//草的位置+随机方向，[0,1]
-    private GameObject grassLayer;//草体模型所在gameObject
-
-    private List<Vector2Int> tilesToRender;
+    [HideInInspector]
+    public List<Vector3> vertices;
+    
 
     /*public struct TileBuffer {
         public Vector4 worldCoordinateStartIndex;//xyz:world coordinate, w:start index
@@ -84,131 +71,16 @@ public class TerrainBuilder : MonoBehaviour {
         filter.mesh = terrainMesh;
     }
 
-    public void PregenerateGrass() {
-        grassLayer = GameObject.Find("GrassLayer");
-        if (grassLayer)
-            DestroyImmediate(grassLayer);
-        Vector3Int startPosition = Vector3Int.zero;//待定
-        System.Random random = new System.Random();
-        grassRoots = new List<Vector3>();
-        grassRootsDir = new List<Vector4>();
-        grassHeights = new List<float>();
-        grassDensityIndexes = new List<float>();
+    
 
-        //随机生成草根位置、方向、高度、密度索引
-        for (int i = 0; i < pregenerateGrassAmount; i++) {
-            float deltaX = (float)random.NextDouble();
-            float deltaZ = (float)random.NextDouble();
-            Vector3 root = new Vector3(deltaX * patchSize, 0, deltaZ * patchSize);
-
-            grassRoots.Add(root);
-            grassRootsDir.Add(new Vector4(root.x, root.y, root.z, (float)random.NextDouble()));
-            grassHeights.Add(grassHeightMax * 0.5f + grassHeightMax * 0.5f * (float)random.NextDouble());
-            grassDensityIndexes.Add((float)random.NextDouble());
-        }
-
-        //生成草地模型
-        Mesh m = new Mesh();
-        m.vertices = grassRoots.ToArray();
-        int[] indices = new int[grassRoots.Count];
-        for (int i = 0; i < indices.Length; i++)
-            indices[i] = i;
-        m.SetIndices(indices, MeshTopology.Points, 0);
-        grassLayer = (new GameObject("GrassLayer"));
-        grassLayer.transform.parent = gameObject.transform;
-        MeshFilter filter = grassLayer.gameObject.AddComponent<MeshFilter>();
-        MeshRenderer renderer = grassLayer.gameObject.AddComponent<MeshRenderer>();
-        renderer.sharedMaterial = grassMaterial;
-        filter.mesh = m;
-        //send to gpu
-        grassMaterial.SetVectorArray(Shader.PropertyToID("_grassRootsDir"), grassRootsDir);
-        grassMaterial.SetFloatArray(Shader.PropertyToID("_grassHeights"), grassHeights);
-        grassMaterial.SetFloatArray(Shader.PropertyToID("_grassDensityIndexes"), grassDensityIndexes);
+    private void Start() {
+        BuildTerrain();
     }
 
+    
 
-    public void calculateTileToRender() {
-        //获取相机视锥体在世界坐标系下的包围盒
-        Camera camera = Camera.main;
-        Vector3[] frustumCorners = new Vector3[4];//临时变量，存本地坐标下相机frustum五个角
-        camera.CalculateFrustumCorners(new Rect(0, 0, 1, 1), camera.farClipPlane, camera.stereoActiveEye, frustumCorners);
-        List<Vector3> frustumBoundPoints = new List<Vector3>();//临时变量，存世界坐标下的五个角
-        for (int i = 0; i < 4; i++) {
-            Vector3 worldSpaceCorner = camera.transform.TransformVector(frustumCorners[i]);
-            frustumBoundPoints.Add(worldSpaceCorner);
-        }
-        frustumBoundPoints.Add(camera.transform.position);
-        //视锥体在xz平面上的三角形
-        Vector3[] frustumTriangle = new Vector3[] { frustumBoundPoints[0], frustumBoundPoints[2], frustumBoundPoints[4] };
-        //为了显示效果，边界向外扩张两个patchSize大小
-        Vector3 triangleCenter = (frustumTriangle[0] + frustumTriangle[1] + frustumTriangle[2]) / 3f;
-        frustumTriangle[0] += patchExpansion * patchSize * (frustumTriangle[0] - triangleCenter)
-            / (frustumTriangle[0] - triangleCenter).magnitude;
-        frustumTriangle[1] += patchExpansion * patchSize * (frustumTriangle[1] - triangleCenter)
-            / (frustumTriangle[1] - triangleCenter).magnitude;
-        frustumTriangle[2] += patchExpansion * patchSize * (frustumTriangle[2] - triangleCenter)
-            / (frustumTriangle[2] - triangleCenter).magnitude;
-        Bounds camBound = new Bounds();//相机包围盒
-        for (int i = 0; i < frustumTriangle.Length; i++) {
-            camBound.Encapsulate(frustumTriangle[i]);
-        }
-
-        //确定检测范围
-        //包围盒内的tile依次与相机求交，获得需要渲染的tile，储存在tilesToRender
-        tilesToRender = new List<Vector2Int>();
-        Vector2Int minIndex = GetTileIndex(camBound.min), maxIndex = GetTileIndex(camBound.max);
-        minIndex = GetConstrainedTileIndex(minIndex.x, minIndex.y);
-        maxIndex = GetConstrainedTileIndex(maxIndex.x, maxIndex.y);
-
-        Bounds testBound = new Bounds(
-                    GetTilePosition(minIndex) + new Vector3(0.5f * patchSize, 0, 0.5f * patchSize),
-                    new Vector3(patchSize, patchSize, patchSize));//patch的包围盒，用来一边移动一边与frustum求交
-        //求交。检测对象：每个tile与frustum；方法：扫描线检测法
-        float iterationStartZ = testBound.center.z;
-        for (int i = minIndex.x; i <= maxIndex.x; i++, testBound.center += new Vector3(patchSize, 0, 0)) {
-            //在z方向上先从min向max找到第一个相交patch：minZ，
-            int minZ = 0;
-            bool finded = false;
-            for (int j = minIndex.y; j <= maxIndex.y; j++, testBound.center += new Vector3(0, 0, patchSize)) {
-                if (PointInTriangle(frustumTriangle[0], frustumTriangle[1], frustumTriangle[2], testBound.center)) {
-                    finded = true;
-                    minZ = j;
-                    break;
-                }
-            }
-            if (!finded) {//正向没找到，下一个。TODO：删掉，不应该有找不到的
-                testBound.center = new Vector3(testBound.center.x, testBound.center.y, iterationStartZ);//z复位
-                continue;
-            }
-            //再按反方向找第一个相交patch：maxZ，
-            int maxZ = 0;
-            float newZ = GetTilePosition(minIndex.x, maxIndex.y).z + 0.5f * patchSize;
-            testBound.center = new Vector3(testBound.center.x, testBound.center.y, newZ);
-            for (int j = maxIndex.y; j >= minIndex.y; j--, testBound.center -= new Vector3(0, 0, patchSize)) {
-                if (PointInTriangle(frustumTriangle[0], frustumTriangle[1], frustumTriangle[2], testBound.center)) {
-                    maxZ = j;
-                    break;
-                }
-            }
-            //则patchMin和patchMax以及之间的patch都在视锥体范围内，存入tilesToRender
-            //Debug.Log("min:" + minZ + "; max:" + maxZ);
-            for (int j = minZ; j <= maxZ; j++) {
-                tilesToRender.Add(new Vector2Int(i, j));
-                //Debug.Log(new Vector2(i, j));
-            }
-            //Debug.Log(tilesToRender.Count);
-
-            if (tilesToRender.Count > 256)
-                Debug.LogError(">256, tileData buffer overflow");
-            testBound.center = new Vector3(testBound.center.x, testBound.center.y, iterationStartZ);//z复位
-        }
-    }
-
-    void GenerateTileData() {
-        //generate tile data
-        //TileBuffer[] tileData = new TileBuffer[256];
-        Vector4[] tileWorldCoordStartIndex = new Vector4[256];
-        Vector4[] tileHeightDelta = new Vector4[256];
+    public MaterialPropertyBlock GeneratePropertyBlock(List<Vector2Int> tilesToRender,
+        int pregenerateGrassAmount, int grassAmountPerTile) {
         System.Random random = new System.Random();
         MaterialPropertyBlock props = new MaterialPropertyBlock();
 
@@ -219,80 +91,27 @@ public class TerrainBuilder : MonoBehaviour {
             //tempTile.worldCoordinateStartIndex = new Vector4(pos.x, pos.y, pos.z, index);
             //float originHeight = tempTile.worldCoordinateStartIndex.y;
             int x = tilesToRender[i].x, y = tilesToRender[i].y;
-            /*tempTile.heightDelta = new Vector3(
-                vertices[heightMap.width * (x + 1) + y].y - originHeight,
-                vertices[heightMap.width * (x + 1) + y + 1].y - originHeight,
-                vertices[heightMap.width * x + y + 1].y - originHeight
-                );*/
-            //tileData[i] = tempTile;
-            tileWorldCoordStartIndex[i] = new Vector4(pos.x, pos.y, pos.z, index);
-            float originHeight = tileWorldCoordStartIndex[i].y;
-            tileHeightDelta[i] = new Vector4(
-                vertices[heightMap.width * (x + 1) + y].y - originHeight,
-                vertices[heightMap.width * (x + 1) + y + 1].y - originHeight,
-                vertices[heightMap.width * x + y + 1].y - originHeight,
-                0
-                );
 
             //send data to property block
             props.SetVector("_tileWorldCoordStartIndex", new Vector4(pos.x, pos.y, pos.z, index));
             props.SetVector("_tileHeightDelta", new Vector4(
-                vertices[heightMap.width * (x + 1) + y].y - originHeight,
-                vertices[heightMap.width * (x + 1) + y + 1].y - originHeight,
-                vertices[heightMap.width * x + y + 1].y - originHeight,
+                vertices[heightMap.width * (x + 1) + y].y - pos.y,
+                vertices[heightMap.width * (x + 1) + y + 1].y - pos.y,
+                vertices[heightMap.width * x + y + 1].y - pos.y,
                 0
                 )
             );
 
         }
-
-        //props.SetVectorArray(Shader.PropertyToID("_tileWorldCoordStartIndex"), tileWorldCoordStartIndex);
-        //props.SetVectorArray(Shader.PropertyToID("_tileHeightDelta"), tileHeightDelta);
+        return props;
     }
 
-    private void Start() {
-        BuildTerrain();
-        PregenerateGrass();
-        calculateTileToRender();
-        GenerateTileData();
-    }
-
-    private void Update() {
-        //render grass,TODO: LOD 64 32 16
-        Mesh grassTile = generateGrassTile(64);
-        var position = Vector3.zero;
-        var rotation = Quaternion.identity;
-        var scale = Vector3.one;
-        Matrix4x4[] matrices = new Matrix4x4[tilesToRender.Count];
-        for(int i = 0; i < matrices.Length; i++) {
-            position = GetTilePosition(tilesToRender[i]);
-            matrices[i] = Matrix4x4.TRS(position, rotation, scale);
-        }
-        Graphics.DrawMeshInstanced(grassTile, 0, grassMaterial, matrices);//TODO: Indirect?
-    }
-
-    /// <summary>
-    /// generate a mesh with numbers of points
-    /// </summary>
-    /// <param name="grassBladeCount"></param>
-    /// <returns></returns>
-    Mesh generateGrassTile(int grassBladeCount) {
-        Mesh result = new Mesh();
-        //set mesh vertices
-        result.vertices = new Vector3[grassBladeCount];
-        //set mesh indices
-        int[] indices = new int[grassBladeCount];
-        for (int i = 0; i < grassBladeCount; i++)
-            indices[i] = i;
-        result.SetIndices(indices, MeshTopology.Points, 0);
-
-        return result;
-    }
+    
 
     /// <summary>
     /// xz平面中点p是否在abc构成的三角形内
     /// </summary>
-    bool PointInTriangle(Vector3 a, Vector3 b, Vector3 c, Vector3 p) {
+    public bool PointInTriangle(Vector3 a, Vector3 b, Vector3 c, Vector3 p) {
         float v2x = (p - a).x, v2y = (p - a).z;
         float v0x = (c - a).x, v0y = (c - a).z;
         float v1x = (b - a).x, v1y = (b - a).z;
@@ -309,23 +128,24 @@ public class TerrainBuilder : MonoBehaviour {
     /// <summary>
     /// 从vertices读取位置
     /// </summary>
-    Vector3 GetTilePosition(int i, int j) {
+    public Vector3 GetTilePosition(int i, int j) {
         Vector2Int index = GetConstrainedTileIndex(i, j);
         return vertices[index.x * heightMap.width + index.y];
     }
 
-    Vector2Int GetConstrainedTileIndex(int indexX, int indexZ) {
+    public Vector2Int GetConstrainedTileIndex(int indexX, int indexZ) {
         indexX = Mathf.Max(0, indexX); indexX = Mathf.Min(indexX, heightMap.width - 2);
         indexZ = Mathf.Max(0, indexZ); indexZ = Mathf.Min(indexZ, heightMap.height - 2);
         return new Vector2Int(indexX, indexZ);
     }
 
-    Vector3 GetTilePosition(Vector2Int index) {
+    public Vector3 GetTilePosition(Vector2Int index) {
         return GetTilePosition(index.x, index.y);
     }
 
-    Vector2Int GetTileIndex(Vector3 position) {
-        return new Vector2Int(Mathf.FloorToInt(position.x / patchSize), Mathf.FloorToInt(position.z / patchSize));
+    public Vector2Int GetTileIndex(Vector3 position) {
+        return new Vector2Int(Mathf.FloorToInt(position.x / GrassBuilder.PATCH_SIZE),
+            Mathf.FloorToInt(position.z / GrassBuilder.PATCH_SIZE));
     }
 
     /*public void RaiseGrass() {

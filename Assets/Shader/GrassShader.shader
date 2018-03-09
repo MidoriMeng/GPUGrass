@@ -37,16 +37,20 @@
             float _Height;//草的高度
             float _Width;//草的宽度
 
-            float4 _grassRootsDir[1024];//TODO
-            float _grassHeights[1024];
-            float _grassDensityIndexes[1024];
+            uint localIndex = -1;
+
+            #define MAX_PATCH_SIZE 1024
+            #define TILE_SIZE 1
+            float4 _patchRootsPosDir[MAX_PATCH_SIZE];//TODO
+            float _patchGrassHeight[MAX_PATCH_SIZE];
+            float _patchDensities[MAX_PATCH_SIZE];
 
             struct v2g
             {
                 float4 pos : SV_POSITION;
                 float3 norm : NORMAL;
                 float2 uv : TEXCOORD0;
-                UNITY_VERTEX_INPUT_INSTANCE_ID// necessary only if you want to access instanced properties in fragment Shader.
+                UNITY_VERTEX_INPUT_INSTANCE_ID// necessary only if you want to access instanced properties in geometry Shader.
             };
 
             struct g2f
@@ -66,13 +70,20 @@
 
             v2g vert(appdata_full v)
             {
+                localIndex = (localIndex + 1) % 64;
+                float4 tileWorldCoordIndex = UNITY_ACCESS_INSTANCED_PROP(Props, _tileWorldCoordStartIndex);
+                float3 density = _patchDensities[localIndex + tileWorldCoordIndex.w];
+                /*if (density < mapDensity)
+                    discard;*/
+
                 v2g o;
                 UNITY_SETUP_INSTANCE_ID(v);
-                UNITY_TRANSFER_INSTANCE_ID(v, o);// necessary only if you want to access instanced properties in the fragment Shader.
-                //float4 worldCoordIndex = UNITY_ACCESS_INSTANCED_PROP(Props, _tileWorldCoordStartIndex);
+                UNITY_TRANSFER_INSTANCE_ID(v, o);//necessary only if you want to access instanced properties in geometry Shader.
+                
                 o.pos = v.vertex;
                 o.norm = v.normal;
                 o.uv = v.texcoord;
+
 
                 return o;
             }
@@ -87,12 +98,37 @@
                 return output;
             }
 
+            float getY(float x2, float y2, float z2, float x3, float y3, float z3, float x4, float z4) {
+                float A = y2 * z3 / z2 / y3,
+                      B = x2 * z3 / z2 / x3 + 0.000001,
+                      C = x2 * y3 / y2 / x3;
+                return (-C * z4 - A * x4) / B;
+            }
 
             [maxvertexcount(30)]
-            void geom(point v2g points[1], inout TriangleStream<g2f> triStream)
-            {
+            void geom(point v2g points[1], inout TriangleStream<g2f> triStream) {
 
+                float4 tileWorldCoordIndex = UNITY_ACCESS_INSTANCED_PROP(Props, _tileWorldCoordStartIndex);
+                float3 heightDelta = UNITY_ACCESS_INSTANCED_PROP(Props, _tileHeightDelta).xyz;
+                float3 grassRoot = _patchRootsPosDir[localIndex + tileWorldCoordIndex.w].xyz;
+                //float direction = 
+                
                 float4 root = points[0].pos;//点的位置-根
+
+                //求deltaY
+                //A(0,0,0)   C(TILE_SIZE, heightDelta.y, TILE_SIZE) 
+                //B(TILE_SIZE, heightDelta.x, 0)   D(0, heightDelta.z, TILE_SIZE)
+                /*float x3, y3, z3;
+                if(grassRoot.z>grassRoot.x){//ACD
+                    x3 = 0; y3 = heightDelta.z; z3 = TILE_SIZE;
+                }
+                else {//ACB
+                    x3 = TILE_SIZE; y3 = heightDelta.x; z3 = 0;
+                }
+
+                float3 root = float4(grassRoot, 0) +
+                    float4(0, getY(TILE_SIZE, heightDelta.y, TILE_SIZE, x3, y3, z3, grassRoot.x, grassRoot.z), 0, 0);
+                */
 
                 const int vertexCount = 12;
 
@@ -138,7 +174,8 @@
                         currentVertexHeight = currentV * _Height;
                     }
 
-                    /*float2 wind = float2(sin(_Time.x * UNITY_PI * 5), sin(_Time.x * UNITY_PI * 5));
+                    //
+                    float2 wind = float2(sin(_Time.x * UNITY_PI * 5), sin(_Time.x * UNITY_PI * 5));
                     wind.x += (sin(_Time.x + root.x / 25) + sin((_Time.x + root.x / 15) + 50)) * 0.5;
                     wind.y += cos(_Time.x + root.z / 80);
                     wind *= lerp(0.7, 1.0, 1.0 - random);
@@ -159,7 +196,9 @@
                     float windForce = length(wind);
 
                     v[i].pos.xz += wind.xy * windCoEff;
-                    v[i].pos.y -= windForce * windCoEff * 0.8;*/
+                    v[i].pos.y -= windForce * windCoEff * 0.8;
+                    //
+
 
                     v[i].pos = UnityObjectToClipPos(v[i].pos);
 

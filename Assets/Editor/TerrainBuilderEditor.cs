@@ -21,20 +21,5 @@ public class TerrainBuilderEditor : Editor {
         if (GUILayout.Button("Build Terrain")) {
             script.BuildTerrain();
         }
-
-        EditorGUILayout.Separator();
-
-        //grass options
-        EditorGUILayout.LabelField("Grass Options", EditorStyles.boldLabel);
-        script.grassDensityMap = (Texture2D)EditorGUILayout.ObjectField("Density Map", script.grassDensityMap, typeof(Texture2D), false);
-        script.grassHeightMax = EditorGUILayout.FloatField("Grass Height", script.grassHeightMax);
-        script.patchSize = EditorGUILayout.IntField("Patch Size", script.patchSize);
-        script.grassAmountPerTile = EditorGUILayout.IntField("Grass Amount Per Tile", script.grassAmountPerTile);
-        script.grassMaterial = (Material)EditorGUILayout.ObjectField(
-            "Grass Material", script.grassMaterial, typeof(Material), false);
-        if (GUILayout.Button("Build Grass")) {
-            script.PregenerateGrass();
-            script.calculateTileToRender();
-        }
     }
 }
