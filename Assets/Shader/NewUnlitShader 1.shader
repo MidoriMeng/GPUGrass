@@ -1,11 +1,8 @@
-﻿// Upgrade NOTE: upgraded instancing buffer 'InstanceProperties' to new syntax.
-
-Shader "test/NewUnlitShader"
+﻿Shader "Unlit/NewUnlitShader 1"
 {
 	Properties
 	{
 		_MainTex ("Texture", 2D) = "white" {}
-        _tileHeightDeltaStartIndex("height delta index", Vector) = (0,0,0,0)
 	}
 	SubShader
 	{
@@ -17,27 +14,26 @@ Shader "test/NewUnlitShader"
 			CGPROGRAM
 			#pragma vertex vert
 			#pragma fragment frag
+			// make fog work
+			#pragma multi_compile_fog
             #pragma multi_compile_instancing
 			
 			#include "UnityCG.cginc"
+            #include "UnityInstancing.cginc"
 
 			struct appdata
 			{
+                UNITY_VERTEX_INPUT_INSTANCE_ID
 				float4 vertex : POSITION;
 				float2 uv : TEXCOORD0;
-                UNITY_VERTEX_INPUT_INSTANCE_ID
 			};
 
 			struct v2f
 			{
-                UNITY_VERTEX_INPUT_INSTANCE_ID
 				float2 uv : TEXCOORD0;
+				UNITY_FOG_COORDS(1)
 				float4 vertex : SV_POSITION;
 			};
-
-            UNITY_INSTANCING_BUFFER_START(prop)
-                UNITY_DEFINE_INSTANCED_PROP(float4, _tileHeightDeltaStartIndex)
-            UNITY_INSTANCING_BUFFER_END(prop)
 
 			sampler2D _MainTex;
 			float4 _MainTex_ST;
@@ -45,9 +41,10 @@ Shader "test/NewUnlitShader"
 			v2f vert (appdata v)
 			{
 				v2f o;
-                UNITY_SETUP_INSTANCE_ID(v);//
+                UNITY_SETUP_INSTANCE_ID(v);
 				o.vertex = UnityObjectToClipPos(v.vertex);
 				o.uv = TRANSFORM_TEX(v.uv, _MainTex);
+				UNITY_TRANSFER_FOG(o,o.vertex);
 				return o;
 			}
 			
@@ -55,6 +52,8 @@ Shader "test/NewUnlitShader"
 			{
 				// sample the texture
 				fixed4 col = tex2D(_MainTex, i.uv);
+				// apply fog
+				UNITY_APPLY_FOG(i.fogCoord, col);
 				return col;
 			}
 			ENDCG

@@ -10,7 +10,7 @@ public class TerrainBuilder : MonoBehaviour {
     public Material terrainMat;
     [HideInInspector]
     public List<Vector3> vertices;
-    
+
 
     /*public struct TileBuffer {
         public Vector4 worldCoordinateStartIndex;//xyz:world coordinate, w:start index
@@ -70,73 +70,21 @@ public class TerrainBuilder : MonoBehaviour {
         terrainMesh.RecalculateNormals();
         filter.mesh = terrainMesh;
     }
-
     
 
-    private void Start() {
-        BuildTerrain();
+    public Vector2Int GetConstrainedTileIndex(int indexX, int indexZ) {
+        indexX = Mathf.Max(0, indexX); indexX = Mathf.Min(indexX, heightMap.width / GrassBuilder.PATCH_SIZE - 2);
+        indexZ = Mathf.Max(0, indexZ); indexZ = Mathf.Min(indexZ, heightMap.height / GrassBuilder.PATCH_SIZE - 2);
+        return new Vector2Int(indexX, indexZ);
     }
-
     
-
-    public MaterialPropertyBlock GeneratePropertyBlock(List<Vector2Int> tilesToRender,
-        int pregenerateGrassAmount, int grassAmountPerTile) {
-        System.Random random = new System.Random();
-        MaterialPropertyBlock props = new MaterialPropertyBlock();
-
-        for (int i = 0; i < tilesToRender.Count; i++) {
-            //TileBuffer tempTile = new TileBuffer();
-            Vector3 pos = GetTilePosition(tilesToRender[i]);
-            int index = (int)(random.NextDouble() * (pregenerateGrassAmount - grassAmountPerTile));
-            //tempTile.worldCoordinateStartIndex = new Vector4(pos.x, pos.y, pos.z, index);
-            //float originHeight = tempTile.worldCoordinateStartIndex.y;
-            int x = tilesToRender[i].x, y = tilesToRender[i].y;
-
-            //send data to property block
-            props.SetVector("_tileWorldCoordStartIndex", new Vector4(pos.x, pos.y, pos.z, index));
-            props.SetVector("_tileHeightDelta", new Vector4(
-                vertices[heightMap.width * (x + 1) + y].y - pos.y,
-                vertices[heightMap.width * (x + 1) + y + 1].y - pos.y,
-                vertices[heightMap.width * x + y + 1].y - pos.y,
-                0
-                )
-            );
-
-        }
-        return props;
-    }
-
-    
-
-    /// <summary>
-    /// xz平面中点p是否在abc构成的三角形内
-    /// </summary>
-    public bool PointInTriangle(Vector3 a, Vector3 b, Vector3 c, Vector3 p) {
-        float v2x = (p - a).x, v2y = (p - a).z;
-        float v0x = (c - a).x, v0y = (c - a).z;
-        float v1x = (b - a).x, v1y = (b - a).z;
-        float v = (v0x * v2y - v0y * v2x) / (v0x * v1y - v0y * v1x);
-        float u = (v1x * v2y - v1y * v2x) / (v0y * v1x - v0x * v1y);
-        if (u < 0 || u > 1) // if u out of range, return directly
-            return false;
-
-        if (v < 0 || v > 1) // if v out of range, return directly
-            return false;
-        return u + v <= 1;
-    }
-
     /// <summary>
     /// 从vertices读取位置
     /// </summary>
     public Vector3 GetTilePosition(int i, int j) {
+        //Debug.Log(i + "  " + j+" " + vertices.Count);
         Vector2Int index = GetConstrainedTileIndex(i, j);
-        return vertices[index.x * heightMap.width + index.y];
-    }
-
-    public Vector2Int GetConstrainedTileIndex(int indexX, int indexZ) {
-        indexX = Mathf.Max(0, indexX); indexX = Mathf.Min(indexX, heightMap.width - 2);
-        indexZ = Mathf.Max(0, indexZ); indexZ = Mathf.Min(indexZ, heightMap.height - 2);
-        return new Vector2Int(indexX, indexZ);
+        return vertices[index.x * GrassBuilder.PATCH_SIZE * heightMap.width + index.y * GrassBuilder.PATCH_SIZE];
     }
 
     public Vector3 GetTilePosition(Vector2Int index) {
@@ -147,6 +95,11 @@ public class TerrainBuilder : MonoBehaviour {
         return new Vector2Int(Mathf.FloorToInt(position.x / GrassBuilder.PATCH_SIZE),
             Mathf.FloorToInt(position.z / GrassBuilder.PATCH_SIZE));
     }
+
+    private void Awake() {
+        BuildTerrain();
+    }
+
 
     /*public void RaiseGrass() {
         if (grassLayer)

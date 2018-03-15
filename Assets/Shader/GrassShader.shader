@@ -41,6 +41,7 @@
 
             #define MAX_PATCH_SIZE 1024
             #define TILE_SIZE 1
+
             float4 _patchRootsPosDir[MAX_PATCH_SIZE];//TODO
             float _patchGrassHeight[MAX_PATCH_SIZE];
             float _patchDensities[MAX_PATCH_SIZE];

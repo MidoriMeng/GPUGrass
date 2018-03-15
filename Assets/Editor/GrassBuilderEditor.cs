@@ -13,12 +13,14 @@ public class GrassBuilderEditor : Editor {
         
         script.grassDensityMap = (Texture2D)EditorGUILayout.ObjectField("Density Map", script.grassDensityMap, typeof(Texture2D), false);
         script.grassHeightMax = EditorGUILayout.FloatField("Grass Height", script.grassHeightMax);
-        //script.patchSize = EditorGUILayout.IntField("Patch Size", script.patchSize);
+        script.pregenerateGrassAmount = EditorGUILayout.IntField("pregenerate grass amount", script.pregenerateGrassAmount);
         script.grassAmountPerTile = EditorGUILayout.IntField("Grass Amount Per Tile", script.grassAmountPerTile);
         script.grassMaterial = (Material)EditorGUILayout.ObjectField(
             "Grass Material", script.grassMaterial, typeof(Material), false);
+        script.mesh = (Mesh)EditorGUILayout.ObjectField(
+            "Grass Mesh", script.mesh, typeof(Mesh), false);
         if (GUILayout.Button("Build Grass")) {
-            script.PregenerateGrass();
+            script.PregenerateGrassInfo();
             script.calculateTileToRender();
         }
     }
