@@ -1,6 +1,4 @@
-﻿// Upgrade NOTE: upgraded instancing buffer 'InstanceProperties' to new syntax.
-
-Shader "test/NewUnlitShader"
+﻿Shader "test/NewUnlitShader"
 {
 	Properties
 	{
@@ -14,25 +12,33 @@ Shader "test/NewUnlitShader"
 
 		Pass
 		{
+            Tags{
+            "LightMode" = "ForwardBase"
+            }
 			CGPROGRAM
 			#pragma vertex vert
 			#pragma fragment frag
+            #pragma target 4.0
             #pragma multi_compile_instancing
-			
-			#include "UnityCG.cginc"
+
+            #include "UnityCG.cginc"
+            #include "UnityInstancing.cginc"
 
 			struct appdata
 			{
-				float4 vertex : POSITION;
-				float2 uv : TEXCOORD0;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
+				float4 vertex : POSITION;
+                float3 normal : NORMAL;
+                float4 tangent : TANGENT;
+				float2 uv : TEXCOORD0;
 			};
 
 			struct v2f
 			{
                 UNITY_VERTEX_INPUT_INSTANCE_ID
+                float4 pos : SV_POSITION;
 				float2 uv : TEXCOORD0;
-				float4 vertex : SV_POSITION;
+                float3 normal : TEXCOORD1;
 			};
 
             UNITY_INSTANCING_BUFFER_START(prop)
@@ -43,19 +49,28 @@ Shader "test/NewUnlitShader"
 			float4 _MainTex_ST;
 			
 			v2f vert (appdata v)
-			{
-				v2f o;
-                UNITY_SETUP_INSTANCE_ID(v);//
-				o.vertex = UnityObjectToClipPos(v.vertex);
-				o.uv = TRANSFORM_TEX(v.uv, _MainTex);
-				return o;
-			}
+            {
+                v2f o;
+                UNITY_INITIALIZE_OUTPUT(v2f, o);
+                UNITY_SETUP_INSTANCE_ID(v);
+                UNITY_TRANSFER_INSTANCE_ID(v, o);
+                o.pos = mul(UNITY_MATRIX_VP, mul(unity_ObjectToWorld, v.vertex));
+
+                //o.pos = UnityObjectToClipPosInstanced(v.vertex);
+                o.uv = TRANSFORM_TEX(v.uv, _MainTex);
+                o.normal = UnityObjectToWorldNormal(v.normal);
+                return o;
+            }
 			
 			fixed4 frag (v2f i) : SV_Target
 			{
-				// sample the texture
+                UNITY_SETUP_INSTANCE_ID(i);
 				fixed4 col = tex2D(_MainTex, i.uv);
-				return col;
+#if defined(DEFAULT_UNITY_VERTEX_INPUT_INSTANCE_ID)
+				return fixed4(0,1,1,1);
+#else
+            return fixed4(i.instanceID /500, 0, 0, 1);
+#endif
 			}
 			ENDCG
 		}

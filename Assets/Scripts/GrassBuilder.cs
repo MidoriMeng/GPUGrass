@@ -1,24 +1,29 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 public class GrassBuilder : MonoBehaviour {
-    public Mesh mesh;
+    public Mesh grassMesh;
     private TerrainBuilder tBuilder;
     //grass
     public Texture2D grassDensityMap;
     public float grassHeightMax = 2f;
     public const int PATCH_SIZE = 2;//Patch的长/宽
-    public int grassAmountPerTile;//实际渲染时每个Tile内最多的草叶数量
+    public int grassAmountPerTile = 64;//实际渲染时每个Tile内最多的草叶数量
     public int pregenerateGrassAmount = 1023;//预生成Patch草体总长度
+    public int bladeSectionCount = 5;//草叶分段，5段12顶点，6段14顶点
     public Material grassMaterial;
     public float patchExpansion = 2f;//实际渲染时比视锥体范围扩展的距离，为了保证边界渲染的质量且减少视锥体裁剪的频率
+
     private List<float> grassHeights;
     private List<float> grassDensityIndexes;
     //private List<Vector3> grassRoots;//草的位置
     private List<Vector4> grassRootsDir;//草的位置+随机方向，[0,1]
 
     private List<Vector2Int> tilesToRender;
+    private Matrix4x4[] matrices;
+    private MaterialPropertyBlock prop;
 
     /// <summary>
     /// 预生成草地信息数组，传输给grassMaterial
@@ -132,17 +137,27 @@ public class GrassBuilder : MonoBehaviour {
     /// <param name="grassBladeCount"></param>
     /// <returns></returns>
     Mesh generateGrassTile(int grassBladeCount) {
-        /*Mesh result = new Mesh();
+        Mesh result = new Mesh();
         //set mesh vertices
-        result.vertices = new Vector3[grassBladeCount];
+        int bladeVertexCount = (bladeSectionCount + 1) * 2;
+        result.vertices = new Vector3[grassBladeCount * bladeVertexCount];
+        for(int i = 0; i < result.vertices.Length; i++) {
+            result.vertices[i].x = i;//赋予x坐标，为了使其作为索引在gpu中读取数组信息
+        }
         //set mesh indices
         int[] indices = new int[grassBladeCount];
-        for (int i = 0; i < grassBladeCount; i++)
-            indices[i] = i;
+        for (int i = 0; i < grassBladeCount * bladeSectionCount; i++) {
+            int start = 6 * i;
+            indices[start] = i * 2;
+            indices[start + 1] = i * 2 + 1;
+            indices[start + 2] = i * 2 + 2;
+            indices[start + 3] = i * 2 + 1;
+            indices[start + 4] = i * 2 + 2;
+            indices[start + 5] = i * 2 + 3;
+        }
         result.SetIndices(indices, MeshTopology.Points, 0);
 
-        return result;*/
-        return mesh;
+        return result;
     }
 
 
@@ -193,54 +208,40 @@ public class GrassBuilder : MonoBehaviour {
 
 
 
-    void BuildModels(List<Vector2Int> tiles) {
-        MaterialPropertyBlock prop = new MaterialPropertyBlock();
-        for(int i = 0; i < tiles.Count; i++) {
-            //create gameObject
-            GameObject obj = new GameObject("grassTile", typeof(MeshRenderer), typeof(MeshFilter));
-            obj.transform.parent = transform;
-            obj.transform.position = tBuilder.GetTilePosition(tilesToRender[i]);
-            MeshFilter filter = obj.GetComponent<MeshFilter>();
-            filter.mesh = mesh;//TODO
-            MeshRenderer renderer = obj.GetComponent<MeshRenderer>();
-            renderer.sharedMaterial = grassMaterial;
-
+    void UpdateGrassInfo(List<Vector2Int> tiles) {
+        prop = new MaterialPropertyBlock();
+        matrices = new Matrix4x4[tiles.Count];
+        Vector4[] propData = new Vector4[tiles.Count];
+        System.Random random = new System.Random();
+        for (int i = 0; i < matrices.Length; i++) {
+            //calculate transform matrix
+            matrices[i] = Matrix4x4.TRS(tBuilder.GetTilePosition(tiles[i])
+                , Quaternion.identity, Vector3.one);
             //calculate instance property
-            System.Random random = new System.Random();
             float originY = tBuilder.GetTilePosition(tiles[i]).y;
             int index = (int)(random.NextDouble() * (pregenerateGrassAmount - grassAmountPerTile));
             int x = tiles[i].x, y = tiles[i].y;
-
-            //send data to property block
-            /*prop.SetVector("_tileHeightDeltaStartIndex", new Vector4(
+            propData[i] = new Vector4(
                 tBuilder.GetTilePosition(x + 1, y).y - originY,
                 tBuilder.GetTilePosition(x + 1, y + 1).y - originY,
                 tBuilder.GetTilePosition(x, y + 1).y - originY,
-                index
-                )
-            );
-            renderer.SetPropertyBlock(prop);*/
+                index);
         }
+        prop.SetVectorArray("_tileHeightDeltaStartIndex", propData);
     }
 
     void Start() {
         tBuilder = GameObject.Find("terrain").GetComponent<TerrainBuilder>();
+        //grassMesh = generateGrassTile(grassAmountPerTile);
         PregenerateGrassInfo();
         tilesToRender = calculateTileToRender();
-        BuildModels(tilesToRender);
+        UpdateGrassInfo(tilesToRender);
     }
 
     private void Update() {
         //render grass,TODO: LOD 64 32 16
-        /*Mesh grassTile = generateGrassTile(64);
-        MaterialPropertyBlock prop = new MaterialPropertyBlock();
-        Matrix4x4[] matrices = new Matrix4x4[tilesToRender.Count];
-        for (int i = 0; i < matrices.Length; i++) {
-            matrices[i] = Matrix4x4.TRS(tBuilder.GetTilePosition(tilesToRender[i])
-                , Quaternion.identity, Vector3.one);
-        }
-        Graphics.DrawMeshInstanced(grassTile, 0, grassMaterial, matrices);
-        */
+        Graphics.DrawMeshInstanced(grassMesh, 0, grassMaterial, matrices);
+
     }
 
     /*private void OnDrawGizmos() {
