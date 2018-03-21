@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.Rendering;
 
 public class GrassBuilder : MonoBehaviour {
-    public Mesh grassMesh;
+    private Mesh grassMesh;
     private TerrainBuilder tBuilder;
     //grass
     public Texture2D grassDensityMap;
@@ -142,10 +142,13 @@ public class GrassBuilder : MonoBehaviour {
         int bladeVertexCount = (bladeSectionCount + 1) * 2;
         result.vertices = new Vector3[grassBladeCount * bladeVertexCount];
         for(int i = 0; i < result.vertices.Length; i++) {
-            result.vertices[i].x = i;//赋予x坐标，为了使其作为索引在gpu中读取数组信息
+            //赋予x坐标，为了使其作为索引在gpu中读取数组信息
+            result.vertices[i].x = (int)(i / bladeVertexCount);
+            result.vertices[i].y = (int)(i % bladeVertexCount);
+            Debug.Log(result.vertices[i]);
         }
         //set mesh indices
-        int[] indices = new int[grassBladeCount];
+        int[] indices = new int[result.vertices.Length];
         for (int i = 0; i < grassBladeCount * bladeSectionCount; i++) {
             int start = 6 * i;
             indices[start] = i * 2;
@@ -232,7 +235,7 @@ public class GrassBuilder : MonoBehaviour {
 
     void Start() {
         tBuilder = GameObject.Find("terrain").GetComponent<TerrainBuilder>();
-        //grassMesh = generateGrassTile(grassAmountPerTile);
+        grassMesh = generateGrassTile(grassAmountPerTile);
         PregenerateGrassInfo();
         tilesToRender = calculateTileToRender();
         UpdateGrassInfo(tilesToRender);

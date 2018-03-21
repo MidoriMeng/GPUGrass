@@ -17,8 +17,8 @@ public class GrassBuilderEditor : Editor {
         script.grassAmountPerTile = EditorGUILayout.IntField("Grass Amount Per Tile", script.grassAmountPerTile);
         script.grassMaterial = (Material)EditorGUILayout.ObjectField(
             "Grass Material", script.grassMaterial, typeof(Material), false);
-        script.grassMesh = (Mesh)EditorGUILayout.ObjectField(
-            "Grass Mesh", script.grassMesh, typeof(Mesh), false);
+        /*script.grassMesh = (Mesh)EditorGUILayout.ObjectField(
+            "Grass Mesh", script.grassMesh, typeof(Mesh), false);*/
         if (GUILayout.Button("Build Grass")) {
             script.PregenerateGrassInfo();
             script.calculateTileToRender();

@@ -7,7 +7,7 @@ Material:
   m_PrefabParentObject: {fileID: 0}
   m_PrefabInternal: {fileID: 0}
   m_Name: grass
-  m_Shader: {fileID: 4800000, guid: 71e53b56f4b84c740a671c6572d1be4c, type: 3}
+  m_Shader: {fileID: 4800000, guid: 582cd044717731f43b254f97a0ec0b4d, type: 3}
   m_ShaderKeywords: 
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 1
