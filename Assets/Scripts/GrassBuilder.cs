@@ -12,7 +12,7 @@ public class GrassBuilder : MonoBehaviour {
     public const int PATCH_SIZE = 2;//Patch的长/宽
     public int grassAmountPerTile = 64;//实际渲染时每个Tile内最多的草叶数量
     public int pregenerateGrassAmount = 1023;//预生成Patch草体总长度
-    public int bladeSectionCount = 5;//草叶分段，5段12顶点，6段14顶点
+    private int bladeSectionCount = 5;//草叶分段，5段12顶点，6段14顶点
     public Material grassMaterial;
     public float patchExpansion = 2f;//实际渲染时比视锥体范围扩展的距离，为了保证边界渲染的质量且减少视锥体裁剪的频率
 
@@ -138,32 +138,100 @@ public class GrassBuilder : MonoBehaviour {
     /// <returns></returns>
     Mesh generateGrassTile(int grassBladeCount) {
         Mesh result = new Mesh();
-        //set mesh vertices
         int bladeVertexCount = (bladeSectionCount + 1) * 2;
-        result.vertices = new Vector3[grassBladeCount * bladeVertexCount];
-        for(int i = 0; i < result.vertices.Length; i++) {
+        Vector3[] normals = new Vector3[grassBladeCount * bladeVertexCount];
+        Vector3 []vertices = new Vector3[grassBladeCount * bladeVertexCount];
+        Vector2[] uv = new Vector2[grassBladeCount * bladeVertexCount];
+        for(int i = 0; i < vertices.Length; i++) {
             //赋予x坐标，为了使其作为索引在gpu中读取数组信息
-            result.vertices[i].x = (int)(i / bladeVertexCount);
-            result.vertices[i].y = (int)(i % bladeVertexCount);
-            Debug.Log(result.vertices[i]);
+            //vertices[i].x = (int)(i / bladeVertexCount)*0.2f;
+            //vertices[i].y = (int)(i % bladeVertexCount)*0.2f;
+            vertices[i] = new Vector3((i % bladeVertexCount % 2 + (int)(i/bladeVertexCount)*2/*12*/),
+                (int)(i % bladeVertexCount/*12*/ / 2), 0);
+            normals[i] = -Vector3.forward;
+            uv[i] = new Vector2(i % bladeVertexCount % 2,
+                ((int)(i % bladeVertexCount / 2)) / bladeSectionCount);
         }
-        //set mesh indices
-        int[] indices = new int[result.vertices.Length];
-        for (int i = 0; i < grassBladeCount * bladeSectionCount; i++) {
-            int start = 6 * i;
-            indices[start] = i * 2;
-            indices[start + 1] = i * 2 + 1;
-            indices[start + 2] = i * 2 + 2;
-            indices[start + 3] = i * 2 + 1;
-            indices[start + 4] = i * 2 + 2;
-            indices[start + 5] = i * 2 + 3;
-        }
-        result.SetIndices(indices, MeshTopology.Points, 0);
+        result.vertices = vertices;
 
+        int[] triangles = new int[6 * grassBladeCount * bladeSectionCount];
+        int trii = 0;
+        for(int blade=0;blade< grassBladeCount; blade++) {
+            for(int section = 0; section < bladeSectionCount; section++) {
+                int start = blade * bladeVertexCount + section * 2;
+                triangles[trii] = start;
+                triangles[trii + 1] = start + 3;
+                triangles[trii + 2] = start + 1;
+
+                triangles[trii + 3] = start;
+                triangles[trii + 4] = start + 2;
+                triangles[trii + 5] = start + 3;
+                trii += 6;
+            }
+        }
+        result.triangles = triangles;
+        result.normals = normals;
+        result.uv = uv;
         return result;
     }
 
+    Mesh generate() {
+        Mesh mesh = new Mesh();
+        var vertices = new Vector3[8];
 
+        vertices[0] = new Vector3(0, 0, 0);
+        vertices[1] = new Vector3(2, 0, 0);
+        vertices[2] = new Vector3(0, 2, 0);
+        vertices[3] = new Vector3(2, 2, 0);
+
+        vertices[4] = new Vector3(0, 0, 2);
+        vertices[5] = new Vector3(2, 0, 2);
+        vertices[6] = new Vector3(0, 2, 2);
+        vertices[7] = new Vector3(2, 2, 2);
+
+        mesh.vertices = vertices;
+
+        var tri = new int[12];
+
+        tri[0] = 0;
+        tri[1] = 2;
+        tri[2] = 1;
+
+        tri[3] = 2;
+        tri[4] = 3;
+        tri[5] = 1;
+
+        tri[6] = 4;
+        tri[7] = 6;
+        tri[8] = 5;
+
+        tri[9] = 6;
+        tri[10] = 7;
+        tri[11] = 5;
+
+        mesh.triangles = tri;
+
+        Vector3[] normals  = new Vector3[8];
+
+        for (int i = 0; i < normals.Length; i++) normals[i] = -Vector3.forward;
+
+        mesh.normals = normals;
+
+        var uv= new Vector2[8];
+
+        uv[0] = new Vector2(0, 0);
+        uv[1] = new Vector2(1, 0);
+        uv[2] = new Vector2(0, 1);
+        uv[3] = new Vector2(1, 1);
+
+        uv[4] = new Vector2(0, 0);
+        uv[5] = new Vector2(1, 0);
+        uv[6] = new Vector2(0, 1);
+        uv[7] = new Vector2(1, 1);
+
+        mesh.uv = uv;
+        return mesh;
+    }
 
     public MaterialPropertyBlock GeneratePropertyBlock(List<Vector2Int> tilesToRender) {
         System.Random random = new System.Random();
@@ -235,7 +303,13 @@ public class GrassBuilder : MonoBehaviour {
 
     void Start() {
         tBuilder = GameObject.Find("terrain").GetComponent<TerrainBuilder>();
-        grassMesh = generateGrassTile(grassAmountPerTile);
+        grassMesh = generateGrassTile(64);
+        ///grass
+        GameObject grass = new GameObject("grass", typeof(MeshRenderer),typeof(MeshFilter));
+        grass.transform.parent = transform;
+        grass.GetComponent<MeshFilter>().mesh = grassMesh;
+        grass.GetComponent<MeshRenderer>().sharedMaterial = grassMaterial;
+
         PregenerateGrassInfo();
         tilesToRender = calculateTileToRender();
         UpdateGrassInfo(tilesToRender);
@@ -243,7 +317,7 @@ public class GrassBuilder : MonoBehaviour {
 
     private void Update() {
         //render grass,TODO: LOD 64 32 16
-        Graphics.DrawMeshInstanced(grassMesh, 0, grassMaterial, matrices);
+        //Graphics.DrawMeshInstanced(grassMesh, 0, grassMaterial, matrices);
 
     }
 

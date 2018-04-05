@@ -1,8 +1,9 @@
-﻿Shader "Unlit/NewUnlitShader 1"
+﻿Shader "test/simple color"
 {
 	Properties
 	{
 		_MainTex ("Texture", 2D) = "white" {}
+    //_Color("color", )
 	}
 	SubShader
 	{
@@ -54,7 +55,7 @@
 				fixed4 col = tex2D(_MainTex, i.uv);
 				// apply fog
 				UNITY_APPLY_FOG(i.fogCoord, col);
-				return col;
+				return fixed4(0,0,1,1);
 			}
 			ENDCG
 		}

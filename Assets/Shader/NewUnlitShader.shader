@@ -66,11 +66,7 @@
 			{
                 UNITY_SETUP_INSTANCE_ID(i);
 				fixed4 col = tex2D(_MainTex, i.uv);
-#if defined(DEFAULT_UNITY_VERTEX_INPUT_INSTANCE_ID)
-				return fixed4(0,1,1,1);
-#else
-            return fixed4(i.instanceID /500, 0, 0, 1);
-#endif
+                return col;
 			}
 			ENDCG
 		}
