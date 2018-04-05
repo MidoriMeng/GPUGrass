@@ -144,13 +144,13 @@ public class GrassBuilder : MonoBehaviour {
         Vector2[] uv = new Vector2[grassBladeCount * bladeVertexCount];
         for(int i = 0; i < vertices.Length; i++) {
             //赋予x坐标，为了使其作为索引在gpu中读取数组信息
-            //vertices[i].x = (int)(i / bladeVertexCount)*0.2f;
-            //vertices[i].y = (int)(i % bladeVertexCount)*0.2f;
-            vertices[i] = new Vector3((i % bladeVertexCount % 2 + (int)(i/bladeVertexCount)*2/*12*/),
-                (int)(i % bladeVertexCount/*12*/ / 2), 0);
+            //vertices[i].x = (int)(i / bladeVertexCount);
+            //vertices[i].y = (int)(i % bladeVertexCount);
+           vertices[i] = new Vector3((i % bladeVertexCount % 2 + (int)(i/bladeVertexCount)*2),
+                (int)(i % bladeVertexCount / 2), 0);
             normals[i] = -Vector3.forward;
             uv[i] = new Vector2(i % bladeVertexCount % 2,
-                ((int)(i % bladeVertexCount / 2)) / bladeSectionCount);
+                ((float)(i % bladeVertexCount / 2)) / bladeSectionCount);
         }
         result.vertices = vertices;
 
@@ -173,64 +173,6 @@ public class GrassBuilder : MonoBehaviour {
         result.normals = normals;
         result.uv = uv;
         return result;
-    }
-
-    Mesh generate() {
-        Mesh mesh = new Mesh();
-        var vertices = new Vector3[8];
-
-        vertices[0] = new Vector3(0, 0, 0);
-        vertices[1] = new Vector3(2, 0, 0);
-        vertices[2] = new Vector3(0, 2, 0);
-        vertices[3] = new Vector3(2, 2, 0);
-
-        vertices[4] = new Vector3(0, 0, 2);
-        vertices[5] = new Vector3(2, 0, 2);
-        vertices[6] = new Vector3(0, 2, 2);
-        vertices[7] = new Vector3(2, 2, 2);
-
-        mesh.vertices = vertices;
-
-        var tri = new int[12];
-
-        tri[0] = 0;
-        tri[1] = 2;
-        tri[2] = 1;
-
-        tri[3] = 2;
-        tri[4] = 3;
-        tri[5] = 1;
-
-        tri[6] = 4;
-        tri[7] = 6;
-        tri[8] = 5;
-
-        tri[9] = 6;
-        tri[10] = 7;
-        tri[11] = 5;
-
-        mesh.triangles = tri;
-
-        Vector3[] normals  = new Vector3[8];
-
-        for (int i = 0; i < normals.Length; i++) normals[i] = -Vector3.forward;
-
-        mesh.normals = normals;
-
-        var uv= new Vector2[8];
-
-        uv[0] = new Vector2(0, 0);
-        uv[1] = new Vector2(1, 0);
-        uv[2] = new Vector2(0, 1);
-        uv[3] = new Vector2(1, 1);
-
-        uv[4] = new Vector2(0, 0);
-        uv[5] = new Vector2(1, 0);
-        uv[6] = new Vector2(0, 1);
-        uv[7] = new Vector2(1, 1);
-
-        mesh.uv = uv;
-        return mesh;
     }
 
     public MaterialPropertyBlock GeneratePropertyBlock(List<Vector2Int> tilesToRender) {
@@ -257,8 +199,6 @@ public class GrassBuilder : MonoBehaviour {
         }
         return props;
     }
-
-
 
     /// <summary>
     /// xz平面中点p是否在abc构成的三角形内
@@ -317,7 +257,7 @@ public class GrassBuilder : MonoBehaviour {
 
     private void Update() {
         //render grass,TODO: LOD 64 32 16
-        //Graphics.DrawMeshInstanced(grassMesh, 0, grassMaterial, matrices);
+        Graphics.DrawMeshInstanced(grassMesh, 0, grassMaterial, matrices);
 
     }
 
