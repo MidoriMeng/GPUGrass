@@ -144,10 +144,11 @@ public class GrassBuilder : MonoBehaviour {
         Vector2[] uv = new Vector2[grassBladeCount * bladeVertexCount];
         for(int i = 0; i < vertices.Length; i++) {
             //赋予x坐标，为了使其作为索引在gpu中读取数组信息
-            //vertices[i].x = (int)(i / bladeVertexCount);
-            //vertices[i].y = (int)(i % bladeVertexCount);
-           vertices[i] = new Vector3((i % bladeVertexCount % 2 + (int)(i/bladeVertexCount)*2),
-                (int)(i % bladeVertexCount / 2), 0);
+            //vertices[i].x = i / bladeVertexCount;//0~63
+            //vertices[i].y = (int)(i % bladeVertexCount);//0~11
+            vertices[i] = new Vector3((i % bladeVertexCount % 2 + (int)(i/bladeVertexCount)*2),
+                (int)(i % bladeVertexCount / 2) + i / bladeVertexCount * 100,//0~63*100
+                i % bladeVertexCount);//0~11
             normals[i] = -Vector3.forward;
             uv[i] = new Vector2(i % bladeVertexCount % 2,
                 ((float)(i % bladeVertexCount / 2)) / bladeSectionCount);
@@ -175,7 +176,7 @@ public class GrassBuilder : MonoBehaviour {
         return result;
     }
 
-    public MaterialPropertyBlock GeneratePropertyBlock(List<Vector2Int> tilesToRender) {
+    /*public MaterialPropertyBlock GeneratePropertyBlock(List<Vector2Int> tilesToRender) {
         System.Random random = new System.Random();
         MaterialPropertyBlock props = new MaterialPropertyBlock();
 
@@ -198,7 +199,7 @@ public class GrassBuilder : MonoBehaviour {
 
         }
         return props;
-    }
+    }*/
 
     /// <summary>
     /// xz平面中点p是否在abc构成的三角形内
@@ -219,7 +220,7 @@ public class GrassBuilder : MonoBehaviour {
 
 
 
-    void UpdateGrassInfo(List<Vector2Int> tiles) {
+    MaterialPropertyBlock UpdateGrassInfo(List<Vector2Int> tiles) {
         prop = new MaterialPropertyBlock();
         matrices = new Matrix4x4[tiles.Count];
         Vector4[] propData = new Vector4[tiles.Count];
@@ -237,11 +238,14 @@ public class GrassBuilder : MonoBehaviour {
                 tBuilder.GetTilePosition(x + 1, y + 1).y - originY,
                 tBuilder.GetTilePosition(x, y + 1).y - originY,
                 index);
+            //Debug.Log(propData[i]);
         }
         prop.SetVectorArray("_tileHeightDeltaStartIndex", propData);
+        return prop;
     }
 
     void Start() {
+        grassMaterial.SetInt("_SectionCount", bladeSectionCount);
         tBuilder = GameObject.Find("terrain").GetComponent<TerrainBuilder>();
         grassMesh = generateGrassTile(64);
         ///grass
@@ -252,12 +256,17 @@ public class GrassBuilder : MonoBehaviour {
 
         PregenerateGrassInfo();
         tilesToRender = calculateTileToRender();
-        UpdateGrassInfo(tilesToRender);
+        prop = UpdateGrassInfo(tilesToRender);
     }
 
     private void Update() {
+        //for test
+        //send to gpu
+        grassMaterial.SetVectorArray(Shader.PropertyToID("_patchRootsPosDir"), grassRootsDir);
+        grassMaterial.SetFloatArray(Shader.PropertyToID("_patchGrassHeight"), grassHeights);
+        grassMaterial.SetFloatArray(Shader.PropertyToID("_patchDensities"), grassDensityIndexes);
         //render grass,TODO: LOD 64 32 16
-        Graphics.DrawMeshInstanced(grassMesh, 0, grassMaterial, matrices);
+        Graphics.DrawMeshInstanced(grassMesh, 0, grassMaterial, matrices, matrices.Length, prop);
 
     }
 
