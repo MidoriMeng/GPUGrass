@@ -20,6 +20,9 @@
             Tags{
             "LightMode" = "ForwardBase"
             }
+            AlphaToMask On
+            Cull Off
+
 			CGPROGRAM
 			#pragma vertex vert
 			#pragma fragment frag
@@ -27,6 +30,7 @@
             #pragma multi_compile_instancing
 
             #include "UnityCG.cginc"
+            #include "Lighting.cginc"
             #include "UnityInstancing.cginc"
 
 			struct appdata
@@ -82,27 +86,26 @@
                 UNITY_INITIALIZE_OUTPUT(v2f, o);
                 UNITY_SETUP_INSTANCE_ID(v);
 
-                float4 heightDeltaIndex = UNITY_ACCESS_INSTANCED_PROP(Props, _tileHeightDeltaStartIndex);
-                int vertIndex = v.vertex.z;//0~11
-                v.vertex.z = v.vertex.y / 100 / 16;//for test
-                int bladeIndex = v.vertex.y / 100 + heightDeltaIndex.w;//0~63+0~1023-64
-                //o.test = heightDeltaIndex.w / (1023-64);
-                v.vertex.y %= 100;//为了测试，后期要改回去
+                float4 hdi = UNITY_ACCESS_INSTANCED_PROP(Props, _tileHeightDeltaStartIndex);
+                int vertIndex = v.vertex.y;//0~11
+                int bladeIndex = v.vertex.x + hdi.w;//0~63+0~1023-64
                 float3 density = _patchDensities[bladeIndex];
                 //local pos
                 float4 root = _patchRootsPosDir[bladeIndex].xyzz; root.w = 0;
                 //deltaY
-                //A(0,0,0)   C(_TileSize, heightDeltaIndex.y, _TileSize) 
-                //B(_TileSize, heightDeltaIndex.x, 0)   D(0, heightDeltaIndex.z, _TileSize)
+                //A(0,0,0)   C(_TileSize, hdi.y, _TileSize) 
+                //B(_TileSize, hdi.x, 0)   D(0, hdi.z, _TileSize)
                 float x3, y3, z3, deltaY;
-                if (root.z + root.x < _TileSize) {//ABD
-                    deltaY = (heightDeltaIndex.x * root.x + heightDeltaIndex.z * root.z) / _TileSize;
+                if (root.z + root.x <= _TileSize) {//ABD
+                    //y=(yb*x+yd*z)/l
+                    deltaY = (hdi.x * root.x + hdi.z * root.z) / _TileSize;
                 }
                 else {//CBD
-                    // deltaY = (x*(2 * yb + yd - yc) + l * (yc - yd - yb) + z * (yc - yb)) / l;
-                    deltaY = (root.x*(2 * heightDeltaIndex.x + heightDeltaIndex.z - heightDeltaIndex.y)
-                        + _TileSize * (heightDeltaIndex.y - heightDeltaIndex.z - heightDeltaIndex.x)
-                        + root.z * (heightDeltaIndex.y - heightDeltaIndex.x)) / _TileSize;
+                    //C(0, 0, 0)  B(0, hdi.x - hdi.y, -_TileSize)  D(-_TileSize, hdi.z - hdi.y, 0)
+                    //(root.x - _TileSize, ?, root.z - _TileSize)
+                    //y'=-(yd'*x'+yb'*z')/l
+                    deltaY = -((hdi.z - hdi.y)*(root.x - _TileSize) + (hdi.x - hdi.y) * (root.z - _TileSize))
+                        / _TileSize + hdi.y;
                 }
                 //bladeOffset
                 float dir = _patchRootsPosDir[bladeIndex].w, height = _patchGrassHeight[bladeIndex];
@@ -110,8 +113,6 @@
                 //处理纹理坐标
                 float currentV = 0;
                 float offsetV = 1.f / ((vertexCount / 2) - 1);
-                /*o.uv= float2(vertIndex % 2,
-                    ((float)(vertIndex / 2)) / _SectionCount);*/
                 float4 bladeOffset;
                 if (fmod(vertIndex, 2) == 0)
                 {
@@ -123,7 +124,6 @@
 
                 }
                 o.pos = root + float4(0, deltaY, 0, 1) + bladeOffset;
-                //o.test = mul(unity_ObjectToWorld, o.pos);
                 o.pos = mul(UNITY_MATRIX_VP, mul(unity_ObjectToWorld, o.pos));
 
                 //o.pos = UnityObjectToClipPosInstanced(v.vertex);
@@ -135,8 +135,24 @@
 			fixed4 frag (v2f i) : SV_Target
 			{
                 //return fixed4(i.test.x, i.test.y, i.test.z, 1);
-				fixed4 col = tex2D(_MainTex, i.uv);
-                return col;
+                fixed4 color = tex2D(_MainTex, i.uv);
+                fixed4 alpha = tex2D(_AlphaTex, i.uv);
+                half3 worldNormal = UnityObjectToWorldNormal(i.normal);
+                //ads
+                fixed3 light;
+
+                //ambient
+                fixed3 ambient = ShadeSH9(half4(worldNormal, 1));
+
+                //diffuse
+                fixed3 diffuseLight = saturate(dot(worldNormal, UnityWorldSpaceLightDir(i.pos))) * _LightColor0;
+
+                //specular Blinn-Phong 
+                fixed3 halfVector = normalize(UnityWorldSpaceLightDir(i.pos) + WorldSpaceViewDir(i.pos));
+                fixed3 specularLight = pow(saturate(dot(worldNormal, halfVector)), 15) * _LightColor0;
+
+                light = ambient + diffuseLight + specularLight;
+                return float4(color.rgb * light, alpha.g);
 			}
 			ENDCG
 		}

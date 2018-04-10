@@ -79,7 +79,7 @@ Material:
     - _GlossMapScale: 1
     - _Glossiness: 0.5
     - _GlossyReflections: 1
-    - _Height: 2.49
+    - _Height: 1.09
     - _Metallic: 0
     - _Mode: 0
     - _OcclusionStrength: 1
@@ -91,7 +91,7 @@ Material:
     - _SrcBlend: 1
     - _TileSize: 2
     - _UVSec: 0
-    - _Width: 0.0128
+    - _Width: 0.0228
     - _ZWrite: 1
     m_Colors:
     - _Color: {r: 1, g: 0, b: 0, a: 1}

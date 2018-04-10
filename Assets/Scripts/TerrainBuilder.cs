@@ -11,12 +11,6 @@ public class TerrainBuilder : MonoBehaviour {
     [HideInInspector]
     public List<Vector3> vertices;
 
-
-    /*public struct TileBuffer {
-        public Vector4 worldCoordinateStartIndex;//xyz:world coordinate, w:start index
-        public Vector4 heightDelta;
-    };*/
-
     /// <summary>
     /// 根据指定的高度图生成地面网格，将地表信息存储到tilebuffer
     /// </summary>
@@ -71,7 +65,6 @@ public class TerrainBuilder : MonoBehaviour {
         filter.mesh = terrainMesh;
     }
     
-
     public Vector2Int GetConstrainedTileIndex(int indexX, int indexZ) {
         indexX = Mathf.Max(0, indexX); indexX = Mathf.Min(indexX, heightMap.width / GrassBuilder.PATCH_SIZE - 2);
         indexZ = Mathf.Max(0, indexZ); indexZ = Mathf.Min(indexZ, heightMap.height / GrassBuilder.PATCH_SIZE - 2);
@@ -99,55 +92,5 @@ public class TerrainBuilder : MonoBehaviour {
     private void Awake() {
         BuildTerrain();
     }
-
-
-    /*public void RaiseGrass() {
-        if (grassLayer)
-            DestroyImmediate(grassLayer.gameObject);
-        Vector3Int startPosition = Vector3Int.zero;//待定
-        Vector3Int curPos = startPosition;
-        System.Random random = new System.Random();
-        grassRoots = new List<Vector3>();
-        directions = new List<float>();
-        grassHeights = new List<float>();
-        grassDensityIndexs = new List<float>();
-
-        //随机生成草根位置、方向、高度、密度索引
-        int density = grassAmountPerPatch / patchSize / patchSize;
-        for (int i = 0; i < patchSize; i++) {
-            for (int j = 0; j < patchSize; j++) {
-                for (int k = 0; k < density; k++) {
-                    float deltaX = (float)random.NextDouble();
-                    float deltaZ = (float)random.NextDouble();
-                    float nextX = heightMap.GetPixel(curPos.x + 1, curPos.z).grayscale * terrainHeight;
-                    float nextZ = heightMap.GetPixel(curPos.x, curPos.z + 1).grayscale * terrainHeight;
-                    float curHeight = heightMap.GetPixel(curPos.x, curPos.z).grayscale * terrainHeight;
-
-                    grassRoots.Add(new Vector3(curPos.x + deltaX,
-                        curHeight + deltaX * (nextX - curHeight) + deltaZ * (nextZ - curHeight),
-                        curPos.z + deltaZ));
-                    directions.Add((float)random.NextDouble());
-                    grassHeights.Add(grassHeightMax * 0.5f + grassHeightMax * 0.5f * (float)random.NextDouble());
-                    grassDensityIndexs.Add((float)random.NextDouble());
-                }
-                curPos += new Vector3Int(0, 0, 1);
-            }
-            curPos += new Vector3Int(1, 0, -4);
-        }
-
-        //生成草地模型
-        Mesh m = new Mesh();
-        m.vertices = grassRoots.ToArray();
-        int[] indices = new int[grassRoots.Count];
-        for (int i = 0; i < indices.Length; i++)
-            indices[i] = i;
-        m.SetIndices(indices, MeshTopology.Points, 0);
-        grassLayer = (new GameObject("GrassLayer")).transform;
-        grassLayer.transform.parent = gameObject.transform;
-        MeshFilter filter = grassLayer.gameObject.AddComponent<MeshFilter>();
-        MeshRenderer renderer = grassLayer.gameObject.AddComponent<MeshRenderer>();
-        renderer.sharedMaterial = grassMaterial;
-        filter.mesh = m;
-    }*/
-
+    
 }

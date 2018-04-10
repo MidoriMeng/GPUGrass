@@ -24,6 +24,17 @@ public class GrassBuilder : MonoBehaviour {
     private List<Vector2Int> tilesToRender;
     private Matrix4x4[] matrices;
     private MaterialPropertyBlock prop;
+    private Vector4[] propData;
+
+    struct pos {
+        public Vector3 a, b, c, d;
+        public pos(Vector3 a, Vector3 b, Vector3 c, Vector3 d) {
+            this.a = a;
+            this.b = b;
+            this.c = c;
+            this.d = d;
+        }
+    }
 
     /// <summary>
     /// 预生成草地信息数组，传输给grassMaterial
@@ -144,11 +155,7 @@ public class GrassBuilder : MonoBehaviour {
         Vector2[] uv = new Vector2[grassBladeCount * bladeVertexCount];
         for(int i = 0; i < vertices.Length; i++) {
             //赋予x坐标，为了使其作为索引在gpu中读取数组信息
-            //vertices[i].x = i / bladeVertexCount;//0~63
-            //vertices[i].y = (int)(i % bladeVertexCount);//0~11
-            vertices[i] = new Vector3((i % bladeVertexCount % 2 + (int)(i/bladeVertexCount)*2),
-                (int)(i % bladeVertexCount / 2) + i / bladeVertexCount * 100,//0~63*100
-                i % bladeVertexCount);//0~11
+            vertices[i] = new Vector3(i / bladeVertexCount, i % bladeVertexCount, 0);//0-63,0-11,0
             normals[i] = -Vector3.forward;
             uv[i] = new Vector2(i % bladeVertexCount % 2,
                 ((float)(i % bladeVertexCount / 2)) / bladeSectionCount);
@@ -175,32 +182,7 @@ public class GrassBuilder : MonoBehaviour {
         result.uv = uv;
         return result;
     }
-
-    /*public MaterialPropertyBlock GeneratePropertyBlock(List<Vector2Int> tilesToRender) {
-        System.Random random = new System.Random();
-        MaterialPropertyBlock props = new MaterialPropertyBlock();
-
-        for (int i = 0; i < tilesToRender.Count; i++) {
-            //TileBuffer tempTile = new TileBuffer();
-            float originY = tBuilder.GetTilePosition(tilesToRender[i]).y;
-            int index = (int)(random.NextDouble() * (pregenerateGrassAmount - grassAmountPerTile));
-            //tempTile.worldCoordinateStartIndex = new Vector4(pos.x, pos.y, pos.z, index);
-            //float originHeight = tempTile.worldCoordinateStartIndex.y;
-            int x = tilesToRender[i].x, y = tilesToRender[i].y;
-
-            //send data to property block
-            props.SetVector("_tileHeightDeltaStartIndex", new Vector4(
-                tBuilder.GetTilePosition(x + 1, y).y - originY,
-                tBuilder.GetTilePosition(x + 1, y + 1).y - originY,
-                tBuilder.GetTilePosition(x, y + 1).y - originY,
-                index
-                )
-            );
-
-        }
-        return props;
-    }*/
-
+    
     /// <summary>
     /// xz平面中点p是否在abc构成的三角形内
     /// </summary>
@@ -223,7 +205,7 @@ public class GrassBuilder : MonoBehaviour {
     MaterialPropertyBlock UpdateGrassInfo(List<Vector2Int> tiles) {
         prop = new MaterialPropertyBlock();
         matrices = new Matrix4x4[tiles.Count];
-        Vector4[] propData = new Vector4[tiles.Count];
+        propData = new Vector4[tiles.Count];
         System.Random random = new System.Random();
         for (int i = 0; i < matrices.Length; i++) {
             //calculate transform matrix
@@ -273,10 +255,15 @@ public class GrassBuilder : MonoBehaviour {
     /*private void OnDrawGizmos() {
         Gizmos.color = Color.red;
         for (int i = 0; i < tilesToRender.Count; i++) {
-            var position = tBuilder.GetTilePosition(tilesToRender[i]);
-            position.y = 100f;
-            Gizmos.DrawSphere(
-                position, 0.1f);
+            Gizmos.color = new Color(
+                i % 3 == 0 ? i / 1: 0,
+                i % 3 == 1 ? i / 1: 0,
+                i % 3 == 2 ? i / 1: 0
+                );
+            Gizmos.DrawSphere(testData[i].a, 0.3f);
+            Gizmos.DrawSphere(testData[i].b, 0.3f);
+            Gizmos.DrawSphere(testData[i].c, 0.3f);
+            Gizmos.DrawSphere(testData[i].d, 0.3f);
         }
 
     }*/
