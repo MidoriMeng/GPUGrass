@@ -229,7 +229,7 @@ public class GrassBuilder : MonoBehaviour {
     void Start() {
         grassMaterial.SetInt("_SectionCount", bladeSectionCount);
         tBuilder = GameObject.Find("terrain").GetComponent<TerrainBuilder>();
-        grassMesh = generateGrassTile(64);
+        grassMesh = generateGrassTile(grassAmountPerTile);
         ///grass
         GameObject grass = new GameObject("grass", typeof(MeshRenderer),typeof(MeshFilter));
         grass.transform.parent = transform;

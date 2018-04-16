@@ -64,6 +64,7 @@
             float _TileSize;
 
             static const float oscillateDelta = 0.05;
+            static const float PI = 3.14159;
 
             #define MAX_PATCH_SIZE 1023
             #define _TileSize 2.0
@@ -87,8 +88,8 @@
                 UNITY_SETUP_INSTANCE_ID(v);
 
                 float4 hdi = UNITY_ACCESS_INSTANCED_PROP(Props, _tileHeightDeltaStartIndex);
-                int vertIndex = v.vertex.y;//0~11
-                int bladeIndex = v.vertex.x + hdi.w;//0~63+0~1023-64
+                uint vertIndex = v.vertex.y;//0~11
+                uint bladeIndex = v.vertex.x + hdi.w;//0~63+0~1023-64
                 float3 density = _patchDensities[bladeIndex];
                 //local pos
                 float4 root = _patchRootsPosDir[bladeIndex].xyzz; root.w = 0;
@@ -108,21 +109,28 @@
                         / _TileSize + hdi.y;
                 }
                 //bladeOffset
-                float dir = _patchRootsPosDir[bladeIndex].w, height = _patchGrassHeight[bladeIndex];
+                float dir = _patchRootsPosDir[bladeIndex].w * 2 * PI, height = _patchGrassHeight[bladeIndex];
                 uint vertexCount = (_SectionCount + 1) * 2;//12
                 //处理纹理坐标
                 float currentV = 0;
                 float offsetV = 1.f / ((vertexCount / 2) - 1);
                 float4 bladeOffset;
-                if (fmod(vertIndex, 2) == 0)
-                {
-                    bladeOffset = float4(-_Width, v.uv.y * _Height, 0, 0);
-                }
-                else
-                {
-                    bladeOffset = float4(_Width, v.uv.y * _Height, 0, 0);
+                                     //return 1 or -1          //
+                bladeOffset = float4((fmod(vertIndex, 2) * 2 - 1) * _Width, v.uv.y * _Height, 0, 0);
+                //blade bend
+                float bending = fmod(bladeIndex, 3)*0.5+0.2;
+                float a = -_Height / (bending * bending), b = 2 * _Height / bending;
+                float deltaZ = (-b + sqrt(b*b + 4 * a*(v.uv.y * _Height))) / (2 * a);
+                o.test = deltaZ;
+                bladeOffset.z += deltaZ;
+                //blade rotation
+                float sin, cos;
+                sincos(dir, /*out*/ sin, /*out*/ cos);
+                bladeOffset = float4(bladeOffset.x*cos + bladeOffset.z*sin,
+                    bladeOffset.y,
+                    -bladeOffset.x*sin + bladeOffset.z*cos, 0);
 
-                }
+
                 o.pos = root + float4(0, deltaY, 0, 1) + bladeOffset;
                 o.pos = mul(UNITY_MATRIX_VP, mul(unity_ObjectToWorld, o.pos));
 
