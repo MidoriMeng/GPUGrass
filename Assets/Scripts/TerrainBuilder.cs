@@ -16,12 +16,15 @@ public class TerrainBuilder : MonoBehaviour {
     /// </summary>
     public void BuildTerrain() {
         //重新生成地形前需要清除之前的信息
-        MeshFilter f = GetComponent<MeshFilter>();
-        if (f)
-            DestroyImmediate(f);
-        MeshRenderer r = GetComponent<MeshRenderer>();
-        if (r)
-            DestroyImmediate(r);
+        MeshFilter filter = GetComponent<MeshFilter>();
+        if (!filter)
+            filter = gameObject.AddComponent<MeshFilter>();
+        MeshRenderer renderer = GetComponent<MeshRenderer>();
+        if (!renderer)
+            renderer = gameObject.AddComponent<MeshRenderer>();
+        MeshCollider collider = GetComponent<MeshCollider>();
+        if (!collider)
+            collider = gameObject.AddComponent<MeshCollider>();
 
         //生成地形
         vertices = new List<Vector3>();
@@ -51,9 +54,7 @@ public class TerrainBuilder : MonoBehaviour {
             uvs[i] = new Vector2(vertices[i].x * terrainScale,
                 vertices[i].z * terrainScale);
         }
-
-        MeshFilter filter = gameObject.AddComponent<MeshFilter>();
-        MeshRenderer renderer = gameObject.AddComponent<MeshRenderer>();
+        
         renderer.sharedMaterial = terrainMat;
 
         Mesh terrainMesh = new Mesh();
@@ -63,6 +64,7 @@ public class TerrainBuilder : MonoBehaviour {
         //normals
         terrainMesh.RecalculateNormals();
         filter.mesh = terrainMesh;
+        collider.sharedMesh = terrainMesh;
     }
     
     public Vector2Int GetConstrainedTileIndex(int indexX, int indexZ) {

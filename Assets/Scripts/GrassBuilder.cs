@@ -26,16 +26,6 @@ public class GrassBuilder : MonoBehaviour {
     private MaterialPropertyBlock prop;
     private Vector4[] propData;
 
-    struct pos {
-        public Vector3 a, b, c, d;
-        public pos(Vector3 a, Vector3 b, Vector3 c, Vector3 d) {
-            this.a = a;
-            this.b = b;
-            this.c = c;
-            this.d = d;
-        }
-    }
-
     /// <summary>
     /// 预生成草地信息数组，传输给grassMaterial
     /// </summary>
@@ -133,10 +123,6 @@ public class GrassBuilder : MonoBehaviour {
             for (int j = minZ; j <= maxZ; j++) {
                 result.Add(new Vector2Int(i, j));
             }
-            //Debug.Log(tilesToRender.Count);
-
-            if (result.Count > 256)
-                Debug.LogError(">256, tileData buffer overflow");
             testBound.center = new Vector3(testBound.center.x, testBound.center.y, iterationStartZ);//z复位
         }
         return result;
@@ -206,15 +192,17 @@ public class GrassBuilder : MonoBehaviour {
         prop = new MaterialPropertyBlock();
         matrices = new Matrix4x4[tiles.Count];
         propData = new Vector4[tiles.Count];
-        System.Random random = new System.Random();
         for (int i = 0; i < matrices.Length; i++) {
             //calculate transform matrix
             matrices[i] = Matrix4x4.TRS(tBuilder.GetTilePosition(tiles[i])
                 , Quaternion.identity, Vector3.one);
             //calculate instance property
-            float originY = tBuilder.GetTilePosition(tiles[i]).y;
-            int index = (int)(random.NextDouble() * (pregenerateGrassAmount - grassAmountPerTile));
             int x = tiles[i].x, y = tiles[i].y;
+            float originY = tBuilder.GetTilePosition(tiles[i]).y;
+            //根据tile的行、列号的伪随机，保证每个tile渲染时在patch的起始位置都是不变的
+            float random = (float)
+                ((new System.Random(x).NextDouble()) + (new System.Random(y).NextDouble())) / 2f;
+            int index = (int)(random * (pregenerateGrassAmount - grassAmountPerTile));
             propData[i] = new Vector4(
                 tBuilder.GetTilePosition(x + 1, y).y - originY,
                 tBuilder.GetTilePosition(x + 1, y + 1).y - originY,
@@ -237,16 +225,14 @@ public class GrassBuilder : MonoBehaviour {
         grass.GetComponent<MeshRenderer>().sharedMaterial = grassMaterial;
 
         PregenerateGrassInfo();
+        InvokeRepeating("GrassUpdate", 0, 2);
+    }
+
+    void GrassUpdate() {
         tilesToRender = calculateTileToRender();
         prop = UpdateGrassInfo(tilesToRender);
     }
-
     private void Update() {
-        //for test
-        //send to gpu
-        grassMaterial.SetVectorArray(Shader.PropertyToID("_patchRootsPosDir"), grassRootsDir);
-        grassMaterial.SetFloatArray(Shader.PropertyToID("_patchGrassHeight"), grassHeights);
-        grassMaterial.SetFloatArray(Shader.PropertyToID("_patchDensities"), grassDensityIndexes);
         //render grass,TODO: LOD 64 32 16
         Graphics.DrawMeshInstanced(grassMesh, 0, grassMaterial, matrices, matrices.Length, prop);
 

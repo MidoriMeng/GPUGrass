@@ -415,7 +415,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   grassDensityMap: {fileID: 0}
   grassHeightMax: 2
-  grassAmountPerTile: 64
+  grassAmountPerTile: 256
   pregenerateGrassAmount: 1023
   grassMaterial: {fileID: 2100000, guid: 6743cdcd44ca4f1489dd4e35a3b692c2, type: 2}
   patchExpansion: 2
@@ -668,7 +668,7 @@ Transform:
   m_PrefabInternal: {fileID: 0}
   m_GameObject: {fileID: 1310466032}
   m_LocalRotation: {x: 0.17187439, y: -0, z: -0, w: 0.9851189}
-  m_LocalPosition: {x: 116, y: 10.71, z: 15.9}
+  m_LocalPosition: {x: 88.8, y: 10.71, z: 15.9}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
