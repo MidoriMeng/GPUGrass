@@ -1,64 +1,81 @@
-﻿Shader "GPUGrass/Grass" {
-    Properties{
-
-        _MainTex("Albedo (RGB)", 2D) = "white" {}
+﻿Shader "GPUGrass/GrassShader"
+{
+	Properties
+	{
+		_MainTex("Albedo (RGB)", 2D) = "white" {}
         _AlphaTex("Alpha (A)", 2D) = "white" {}
         _Height("Grass Height", float) = 3
         _Width("Grass Width", range(0, 0.1)) = 0.05
         _SectionCount("section count", int) = 5
-            _TileSize("section count", float) = 2.0
+        _TileSize("section count", float) = 2.0
+        _tileHeightDeltaStartIndex("height delta index", Vector) = (0,0,0,0)
+	}
+	SubShader
+	{
+		Tags { "RenderType"="Opaque" }
+		LOD 100
 
-    }
-
-    SubShader{
-        Cull off
-        Tags{ "Queue" = "AlphaTest" "RenderType" = "TransparentCutout" "IgnoreProjector" = "True" }
-
-
-        Pass {
-
-            Cull OFF
-            Tags{ "LightMode" = "ForwardBase" }
+		Pass
+		{
+            Tags{
+            "LightMode" = "ForwardBase"
+            }
             AlphaToMask On
+            Cull Off
 
-
-            CGPROGRAM
-
-            #include "UnityCG.cginc" 
-            #pragma vertex vert
-            #pragma fragment frag
+			CGPROGRAM
+			#pragma vertex vert
+			#pragma fragment frag
+            #pragma target 4.6
             #pragma multi_compile_instancing
-            #include "UnityLightingCommon.cginc"
 
-            #pragma target 4.0
+            #include "UnityCG.cginc"
+            #include "Lighting.cginc"
+            #include "UnityInstancing.cginc"
+            #include "MyTessellation.cginc"
 
-            sampler2D _MainTex;
+            #pragma hull MyHullProgram
+
+			struct appdata
+			{
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+				float4 vertex : POSITION;
+                float3 normal : NORMAL;
+                float4 tangent : TANGENT;
+				float2 uv : TEXCOORD0;
+			};
+
+			struct v2f
+			{
+                float4 pos : SV_POSITION;
+				float2 uv : TEXCOORD0;
+                float3 normal : TEXCOORD1;
+                float3 test: TEXCOORD2;
+			};
+
+            UNITY_INSTANCING_BUFFER_START(Props)
+                UNITY_DEFINE_INSTANCED_PROP(float4, _tileHeightDeltaStartIndex)
+            UNITY_INSTANCING_BUFFER_END(Props)
+
+			sampler2D _MainTex;
             sampler2D _AlphaTex;
+			float4 _MainTex_ST;
 
             float _Height;//草的高度
             float _Width;//草的宽度
             int _SectionCount;//草叶的分段数
             float _TileSize;
 
+            static const float oscillateDelta = 0.05;
+            static const float PI = 3.14159;
+
             #define MAX_PATCH_SIZE 1023
-            #define _TileSize 2
+            #define _TileSize 2.0
 
             float4 _patchRootsPosDir[MAX_PATCH_SIZE];//TODO
             float _patchGrassHeight[MAX_PATCH_SIZE];
             float _patchDensities[MAX_PATCH_SIZE];
-
-            struct v2f
-            {
-                float4 pos : SV_POSITION;
-                float3 norm : NORMAL;
-                float2 uv : TEXCOORD0;
-            };
-
-            static const float oscillateDelta = 0.05;
-
-            UNITY_INSTANCING_BUFFER_START(Props)
-                UNITY_DEFINE_INSTANCED_PROP(float4, _tileHeightDeltaStartIndex)
-            UNITY_INSTANCING_BUFFER_END(Props)
+			
 
             float getY(float x2, float y2, float z2, float x3, float y3, float z3, float x4, float z4) {
                 float A = y2 * z3 / z2 / y3,
@@ -67,67 +84,71 @@
                 return (-C * z4 - A * x4) / B;
             }
 
-            v2f vert(appdata_full v)
+			v2f vert (appdata v)
             {
                 v2f o;
                 UNITY_INITIALIZE_OUTPUT(v2f, o);
                 UNITY_SETUP_INSTANCE_ID(v);
-                float4 heightDeltaIndex = UNITY_ACCESS_INSTANCED_PROP(Props, _tileHeightDeltaStartIndex);
-                int bladeIndex = v.vertex.x + heightDeltaIndex.w;//0~63
-                int vertIndex = v.vertex.y;//0~11
+
+                float4 hdi = UNITY_ACCESS_INSTANCED_PROP(Props, _tileHeightDeltaStartIndex);
+                uint vertIndex = v.vertex.y;//0~11
+                uint bladeIndex = v.vertex.x + hdi.w;//0~63+0~1023-64
                 float3 density = _patchDensities[bladeIndex];
-                /*if (density < mapDensity)
-                    discard;*/
-                o.norm = float3(0, 0, 1);
-                o.uv = v.texcoord;
-                //计算o.pos
-                float3 root = _patchRootsPosDir[bladeIndex].xyz;//local pos
-                //确定y
-                //A(0,0,0)   C(_TileSize, heightDeltaIndex.y, _TileSize) 
-                //B(_TileSize, heightDeltaIndex.x, 0)   D(0, heightDeltaIndex.z, _TileSize)
-                float x3, y3, z3;
-                if(root.z > root.x){//ACD
-                    x3 = 0; y3 = heightDeltaIndex.z; z3 = _TileSize;
+                //local pos
+                float4 root = _patchRootsPosDir[bladeIndex].xyzz; root.w = 0;
+                //deltaY
+                //A(0,0,0)   C(_TileSize, hdi.y, _TileSize) 
+                //B(_TileSize, hdi.x, 0)   D(0, hdi.z, _TileSize)
+                float x3, y3, z3, deltaY;
+                if (root.z + root.x <= _TileSize) {//ABD
+                    //y=(yb*x+yd*z)/l
+                    deltaY = (hdi.x * root.x + hdi.z * root.z) / _TileSize;
                 }
-                else {//ACB
-                    x3 = _TileSize; y3 = heightDeltaIndex.x; z3 = 0;
+                else {//CBD
+                    //C(0, 0, 0)  B(0, hdi.x - hdi.y, -_TileSize)  D(-_TileSize, hdi.z - hdi.y, 0)
+                    //(root.x - _TileSize, ?, root.z - _TileSize)
+                    //y'=-(yd'*x'+yb'*z')/l
+                    deltaY = -((hdi.z - hdi.y)*(root.x - _TileSize) + (hdi.x - hdi.y) * (root.z - _TileSize))
+                        / _TileSize + hdi.y;
                 }
-                root +=
-                float3(0, getY(_TileSize, heightDeltaIndex.y, _TileSize, x3, y3, z3, o.pos.x, o.pos.z), 0);
-                //确定o.pos
-                float dir = _patchRootsPosDir[bladeIndex].w, height = _patchGrassHeight[bladeIndex];
-                uint vertexCount = (_SectionCount + 1) * 2;
+                //bladeOffset
+                float dir = _patchRootsPosDir[bladeIndex].w * 2 * PI, height = _patchGrassHeight[bladeIndex];
+                uint vertexCount = (_SectionCount + 1) * 2;//12
                 //处理纹理坐标
                 float currentV = 0;
                 float offsetV = 1.f / ((vertexCount / 2) - 1);
-                //处理当前的高度
-                float currentHeightOffset = 0;
-                float currentVertexHeight = 0;
-                if (fmod(vertIndex, 2) == 0)
-                {
-                    o.pos = float4(root.x - _Width, root.y + currentVertexHeight, root.z, 1);
-                    o.uv = float2(0, currentV);
-                }
-                else
-                {
-                    o.pos = float4(root.x + _Width, root.y + currentVertexHeight, root.z, 1);
-                    o.uv = float2(1, currentV);
+                float4 bladeOffset;
+                                     //return 1 or -1          //
+                bladeOffset = float4((fmod(vertIndex, 2) * 2 - 1) * _Width, v.uv.y * _Height, 0, 0);
+                //blade bend
+                float bending = fmod(bladeIndex, 3)*0.5+0.2;
+                float a = -_Height / (bending * bending), b = 2 * _Height / bending;
+                float deltaZ = (-b + sqrt(b*b + 4 * a*(v.uv.y * _Height))) / (2 * a);
+                o.test = deltaZ;
+                bladeOffset.z += deltaZ;
+                //blade rotation
+                float sin, cos;
+                sincos(dir, /*out*/ sin, /*out*/ cos);
+                bladeOffset = float4(bladeOffset.x*cos + bladeOffset.z*sin,
+                    bladeOffset.y,
+                    -bladeOffset.x*sin + bladeOffset.z*cos, 0);
 
-                    currentV += offsetV;
-                    currentVertexHeight = currentV * _Height;
-                }
-                //v[vertIndex].pos = UnityObjectToClipPos(v[i].pos);
+
+                o.pos = root + float4(0, deltaY, 0, 1) + bladeOffset;
                 o.pos = mul(UNITY_MATRIX_VP, mul(unity_ObjectToWorld, o.pos));
+
+                //o.pos = UnityObjectToClipPosInstanced(v.vertex);
+                o.uv = TRANSFORM_TEX(v.uv, _MainTex);
+                o.normal = UnityObjectToWorldNormal(v.normal);
                 return o;
             }
-
-            half4 frag(v2f IN) : COLOR
-            {
-                fixed4 color = tex2D(_MainTex, IN.uv);
-                fixed4 alpha = tex2D(_AlphaTex, IN.uv);
-
-                half3 worldNormal = UnityObjectToWorldNormal(IN.norm);
-
+			
+			fixed4 frag (v2f i) : SV_Target
+			{
+                //return fixed4(i.test.x, i.test.y, i.test.z, 1);
+                fixed4 color = tex2D(_MainTex, i.uv);
+                fixed4 alpha = tex2D(_AlphaTex, i.uv);
+                half3 worldNormal = UnityObjectToWorldNormal(i.normal);
                 //ads
                 fixed3 light;
 
@@ -135,19 +156,16 @@
                 fixed3 ambient = ShadeSH9(half4(worldNormal, 1));
 
                 //diffuse
-                fixed3 diffuseLight = saturate(dot(worldNormal, UnityWorldSpaceLightDir(IN.pos))) * _LightColor0;
+                fixed3 diffuseLight = saturate(dot(worldNormal, UnityWorldSpaceLightDir(i.pos))) * _LightColor0;
 
                 //specular Blinn-Phong 
-                fixed3 halfVector = normalize(UnityWorldSpaceLightDir(IN.pos) + WorldSpaceViewDir(IN.pos));
+                fixed3 halfVector = normalize(UnityWorldSpaceLightDir(i.pos) + WorldSpaceViewDir(i.pos));
                 fixed3 specularLight = pow(saturate(dot(worldNormal, halfVector)), 15) * _LightColor0;
 
                 light = ambient + diffuseLight + specularLight;
-
                 return float4(color.rgb * light, alpha.g);
-            }
-
-            ENDCG
-
-        }
-    }
+			}
+			ENDCG
+		}
+	}
 }
