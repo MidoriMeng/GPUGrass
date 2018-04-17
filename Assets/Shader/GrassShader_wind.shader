@@ -1,4 +1,4 @@
-﻿Shader "GPUGrass/GrassShader"
+﻿Shader "GPUGrass/GrassShaderWind"
 {
 	Properties
 	{
