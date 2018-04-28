@@ -87,43 +87,40 @@
                 UNITY_INITIALIZE_OUTPUT(v2f, o);
                 UNITY_SETUP_INSTANCE_ID(v);
 
+                //草叶信息
                 float4 hdi = UNITY_ACCESS_INSTANCED_PROP(Props, _tileHeightDeltaStartIndex);
                 uint vertIndex = v.vertex.y;//0~11
                 uint bladeIndex = v.vertex.x + hdi.w;//0~63+0~1023-64
+                uint vertexCount = (_SectionCount + 1) * 2;//12
                 float3 density = _patchDensities[bladeIndex];
-                //local pos
-                float4 root = _patchRootsPosDir[bladeIndex].xyzz; root.w = 0;
-                //deltaY
+                float dir = _patchRootsPosDir[bladeIndex].w * 2 * PI,
+                    height = _patchGrassHeight[bladeIndex];
+                float4 rootLPos = _patchRootsPosDir[bladeIndex].xyzz; rootLPos.w = 0;//local pos in tile
+                //计算deltaY：本地Y增量（高低）
                 //A(0,0,0)   C(_TileSize, hdi.y, _TileSize) 
                 //B(_TileSize, hdi.x, 0)   D(0, hdi.z, _TileSize)
                 float x3, y3, z3, deltaY;
-                if (root.z + root.x <= _TileSize) {//ABD
+                if (rootLPos.z + rootLPos.x <= _TileSize) {//ABD
                     //y=(yb*x+yd*z)/l
-                    deltaY = (hdi.x * root.x + hdi.z * root.z) / _TileSize;
+                    deltaY = (hdi.x * rootLPos.x + hdi.z * rootLPos.z) / _TileSize;
                 }
                 else {//CBD
                     //C(0, 0, 0)  B(0, hdi.x - hdi.y, -_TileSize)  D(-_TileSize, hdi.z - hdi.y, 0)
-                    //(root.x - _TileSize, ?, root.z - _TileSize)
+                    //(rootLPos.x - _TileSize, ?, rootLPos.z - _TileSize)
                     //y'=-(yd'*x'+yb'*z')/l
-                    deltaY = -((hdi.z - hdi.y)*(root.x - _TileSize) + (hdi.x - hdi.y) * (root.z - _TileSize))
+                    deltaY = -((hdi.z - hdi.y)*(rootLPos.x - _TileSize) + (hdi.x - hdi.y) * (rootLPos.z - _TileSize))
                         / _TileSize + hdi.y;
                 }
-                //bladeOffset
-                float dir = _patchRootsPosDir[bladeIndex].w * 2 * PI, height = _patchGrassHeight[bladeIndex];
-                uint vertexCount = (_SectionCount + 1) * 2;//12
-                //处理纹理坐标
-                float currentV = 0;
-                float offsetV = 1.f / ((vertexCount / 2) - 1);
-                float4 bladeOffset;
-                                     //return 1 or -1          //
-                bladeOffset = float4((fmod(vertIndex, 2) * 2 - 1) * _Width, v.uv.y * _Height, 0, 0);
-                //blade bend
+                //形成草叶形状
+                                             //return 1 or -1          //
+                float4 bladeOffset = float4((fmod(vertIndex, 2) * 2 - 1) * _Width, v.uv.y * _Height, 0, 0);
+                //blade bending
                 float bending = fmod(bladeIndex, 3)*0.5+0.2;
                 float a = -_Height / (bending * bending), b = 2 * _Height / bending;
                 float deltaZ = (-b + sqrt(b*b + 4 * a*(v.uv.y * _Height))) / (2 * a);
                 o.test = deltaZ;
                 bladeOffset.z += deltaZ;
-                //blade rotation
+                //blade swinging
                 float sin, cos;
                 sincos(dir, /*out*/ sin, /*out*/ cos);
                 bladeOffset = float4(bladeOffset.x*cos + bladeOffset.z*sin,
@@ -131,7 +128,7 @@
                     -bladeOffset.x*sin + bladeOffset.z*cos, 0);
 
 
-                o.pos = root + float4(0, deltaY, 0, 1) + bladeOffset;
+                o.pos = rootLPos + float4(0, deltaY, 0, 1) + bladeOffset;
                 o.pos = mul(UNITY_MATRIX_VP, mul(unity_ObjectToWorld, o.pos));
 
                 //o.pos = UnityObjectToClipPosInstanced(v.vertex);
