@@ -54,7 +54,7 @@ public class TerrainBuilder : MonoBehaviour {
             uvs[i] = new Vector2(vertices[i].x * terrainScale,
                 vertices[i].z * terrainScale);
         }
-        
+
         renderer.sharedMaterial = terrainMat;
 
         Mesh terrainMesh = new Mesh();
@@ -66,13 +66,20 @@ public class TerrainBuilder : MonoBehaviour {
         filter.mesh = terrainMesh;
         collider.sharedMesh = terrainMesh;
     }
-    
+
     public Vector2Int GetConstrainedTileIndex(int indexX, int indexZ) {
         indexX = Mathf.Max(0, indexX); indexX = Mathf.Min(indexX, heightMap.width / GrassBuilder.PATCH_SIZE - 2);
         indexZ = Mathf.Max(0, indexZ); indexZ = Mathf.Min(indexZ, heightMap.height / GrassBuilder.PATCH_SIZE - 2);
         return new Vector2Int(indexX, indexZ);
     }
-    
+    public Vector2Int GetConstrainedTileIndex(Vector2Int index) {
+        return GetConstrainedTileIndex(index.x, index.y);
+    }
+
+    public Vector2Int GetConstrainedTileIndex(Vector3 position) {
+        return GetConstrainedTileIndex(GetTileIndex(position));
+    }
+
     /// <summary>
     /// 从vertices读取位置
     /// </summary>
@@ -94,5 +101,5 @@ public class TerrainBuilder : MonoBehaviour {
     private void Awake() {
         BuildTerrain();
     }
-    
+
 }

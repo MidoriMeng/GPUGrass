@@ -50,6 +50,7 @@
                 float3 test: TEXCOORD2;
 			};
 
+            //每帧更新
             UNITY_INSTANCING_BUFFER_START(Props)
                 UNITY_DEFINE_INSTANCED_PROP(float4, _tileHeightDeltaStartIndex)
             UNITY_INSTANCING_BUFFER_END(Props)
@@ -62,6 +63,8 @@
             float _Width;//草的宽度
             int _SectionCount;//草叶的分段数
             float _TileSize;
+
+            float4 _FrustumStartPos;//每帧更新，视锥体块的起点
 
             static const float oscillateDelta = 0.05;
             static const float PI = 3.14159;
@@ -114,6 +117,9 @@
                 //形成草叶形状
                                              //return 1 or -1          //
                 float4 bladeOffset = float4((fmod(vertIndex, 2) * 2 - 1) * _Width, v.uv.y * _Height, 0, 0);
+
+                //风
+                float3 windVec = float3(1, 0, 0);
                 //blade bending
                 float bending = fmod(bladeIndex, 3)*0.5+0.2;
                 float a = -_Height / (bending * bending), b = 2 * _Height / bending;
@@ -121,6 +127,7 @@
                 o.test = deltaZ;
                 bladeOffset.z += deltaZ;
                 //blade swinging
+
                 float sin, cos;
                 sincos(dir, /*out*/ sin, /*out*/ cos);
                 bladeOffset = float4(bladeOffset.x*cos + bladeOffset.z*sin,

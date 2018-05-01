@@ -1,0 +1,39 @@
+﻿#pragma kernel CamFrustumCalc
+
+#define TILE_RES 2
+#define NUM_THREADS_X TILE_RES
+#define NUM_THREADS_Y TILE_RES
+
+RWTexture2D<float4> FrustumResult;
+float4 frustumPosIndex[2];
+struct Triangle {
+    int2 a, b, c;
+    int2 ab() { return b - a; }
+    int2 ac() { return c - a; }
+    int2 bc() { return c - b; }
+    half area() { return abs(determinant(half2x2(ab().x, ab().y,ac().x, ac().y))) / 2; }
+};
+
+Triangle NewTriangle(int2 a, int2 b, int2 c) {
+    Triangle r; r.a = a; r.b = b, r.c = c;
+    return r;
+}
+
+float PointInTriangle(int2 a, int2 b, int2 c, int2 p) {
+    Triangle abc = NewTriangle(a, b, c);
+    half sabc = NewTriangle(a, b, c).area(),
+        spbc = NewTriangle(p, b, c).area(),
+        spba = NewTriangle(p, b, a).area(),
+        spac = NewTriangle(p, a, c).area();
+    return step(spbc + spba + spac - sabc, 0);
+}
+
+[numthreads(NUM_THREADS_X, NUM_THREADS_Y,1)]
+void CamFrustumCalc (uint3 id : SV_DispatchThreadID)
+{
+    //numthreads
+    float inTri = PointInTriangle(frustumPosIndex[0].xy, frustumPosIndex[0].zw,
+        frustumPosIndex[1].xy, id.xy);
+    FrustumResult[id.xy] = float4(inTri,0,0,1);
+}
+

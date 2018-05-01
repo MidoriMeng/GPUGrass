@@ -26,6 +26,18 @@ public class GrassBuilder : MonoBehaviour {
     private MaterialPropertyBlock prop;
     private Vector4[] propData;
 
+    //frustum calc
+    public ComputeShader frustumCalcShader;
+    private int frustumTexSizeX, frustumTexSizeY;
+    private int threadGroupSizeX = 2, threadGroupSizeY = 2;
+    public GameObject plane;//for test
+    private RenderTexture frustumTexture;
+
+    //indirect
+    private ComputeBuffer argsBuffer;
+    private uint[] args = new uint[5] { 0, 0, 0, 0, 0 };
+    private Bounds instanceBound;
+
     /// <summary>
     /// 预生成草地信息数组，传输给grassMaterial
     /// </summary>
@@ -92,7 +104,8 @@ public class GrassBuilder : MonoBehaviour {
                     tBuilder.GetTilePosition(minIndex) + new Vector3(0.5f * PATCH_SIZE, 0, 0.5f * PATCH_SIZE),
                     new Vector3(PATCH_SIZE, PATCH_SIZE, PATCH_SIZE));//patch的包围盒，用来一边移动一边与frustum求交
         //求交。检测对象：每个tile与frustum；方法：扫描线检测法
-        float iterationStartZ = testBound.center.z;
+        #region 求交
+        /*float iterationStartZ = testBound.center.z;
         for (int i = minIndex.x; i <= maxIndex.x; i++, testBound.center += new Vector3(PATCH_SIZE, 0, 0)) {
             //在z方向上先从min向max找到第一个相交patch：minZ，
             int minZ = 0;
@@ -125,21 +138,97 @@ public class GrassBuilder : MonoBehaviour {
             }
             testBound.center = new Vector3(testBound.center.x, testBound.center.y, iterationStartZ);//z复位
         }
+        Debug.Log("render tiles: " + result.Count);
+        */
+        #endregion
         return result;
+    }
+
+    /// <summary>
+    /// 更新CS的RT(frustumTexture),
+    /// grassMaterial的_FrustumStartPos和instanceBound
+    /// </summary>
+    /// <param name="camera"></param>
+    public void UpdateFrustumComputeShader(Camera camera) {
+        Vector3[] frustum = new Vector3[3];
+        //想传6个整数，但unity的computeShader.SetInts和SetFloats有问题
+        Vector4[] frusIndex = { Vector4.zero, Vector4.zero };
+        #region 获取视锥体frustum
+        float halfFOV = (camera.fieldOfView * 0.5f) * Mathf.Deg2Rad;
+        float height = camera.farClipPlane * Mathf.Tan(halfFOV);
+        float width = height * camera.aspect;
+
+        Vector3 vec = camera.transform.position, widthDelta = camera.transform.right * width;
+        vec -= widthDelta;
+        vec += (camera.transform.forward * camera.farClipPlane);
+        frustum[0] = camera.transform.position; frustum[1] = vec; frustum[2] = vec + 2 * widthDelta;
+        #endregion
+        Bounds camBound = new Bounds(frustum[0], Vector3.zero);//相机包围盒
+        for (int i = 1; i < frustum.Length; i++) {
+            camBound.Encapsulate(frustum[i]);
+        }
+        Vector2Int minIndex = tBuilder.GetConstrainedTileIndex(camBound.min),
+            maxIndex = tBuilder.GetConstrainedTileIndex(camBound.max);
+
+        //更新compute shader
+        int digit = 0,newTexSizeX,newTexSizeY;
+        #region 将frustumTexSize向上取整（二进制），eg: 9→16
+        newTexSizeX = maxIndex.x - minIndex.x + 1;
+        for (int i = 31; i >= 0; i--)
+            if (((newTexSizeX >> i) & 1) == 1) { digit = i + 1; break; }
+        newTexSizeX = 1 << digit;//向上取整（二进制），eg: 9→16
+        newTexSizeY = maxIndex.y - minIndex.y + 1;
+        for (int i = 31; i >= 0; i--)
+            if (((newTexSizeY >> i) & 1) == 1) { digit = i + 1; break; }
+        newTexSizeY = 1 << digit;
+        #endregion
+        if (newTexSizeX != frustumTexSizeX || newTexSizeY != frustumTexSizeY) {
+            //Debug.Log("new frustum texture");
+            frustumTexture = new RenderTexture(newTexSizeX, newTexSizeY, 24);
+            frustumTexture.enableRandomWrite = true;
+            frustumTexture.Create();
+            int k = frustumCalcShader.FindKernel("CamFrustumCalc");
+            frustumCalcShader.SetTexture(k, "FrustumResult", frustumTexture);
+
+            plane.GetComponent<Renderer>().sharedMaterial.mainTexture = frustumTexture;
+        }
+        frustumTexSizeX = newTexSizeX; frustumTexSizeY = newTexSizeY;
+
+        for (int i=0; i< 3; i++) {
+            Vector2Int t = tBuilder.GetTileIndex(frustum[i]);
+            t-= tBuilder.GetTileIndex(camBound.min);
+            frusIndex[i / 2] += new Vector4(
+                t.x * Mathf.Abs(i - 1),
+                t.y * Mathf.Abs(i - 1),
+                t.x * (i % 2),
+                t.y * (i % 2)
+                );
+        }
+        //Debug.Log(frusIndex[0].ToString() + "   " + frusIndex[1].ToString());
+        instanceBound = camBound;
+        frustumCalcShader.SetVectorArray(Shader.PropertyToID("frustumPosIndex"), frusIndex);
+        grassMaterial.SetVector(Shader.PropertyToID("_FrustumStartPos"),camBound.min);
+        
+    }
+
+    void RunComputeShader() {
+        int k = frustumCalcShader.FindKernel("CamFrustumCalc");
+        //运行shader  参数1=kid  参数2=线程组在x维度的数量 参数3=线程组在y维度的数量 参数4=线程组在z维度的数量
+        frustumCalcShader.Dispatch(k, frustumTexSizeX / threadGroupSizeX,
+            frustumTexSizeY / threadGroupSizeY, 1);
+        //Debug.Log(frustumTexSizeX / threadGroupSizeX + "   " +frustumTexSizeY / threadGroupSizeY);
     }
 
     /// <summary>
     /// generate a mesh with assigned numbers of points
     /// </summary>
-    /// <param name="grassBladeCount"></param>
-    /// <returns></returns>
     Mesh generateGrassTile(int grassBladeCount) {
         Mesh result = new Mesh();
         int bladeVertexCount = (bladeSectionCount + 1) * 2;
         Vector3[] normals = new Vector3[grassBladeCount * bladeVertexCount];
-        Vector3 []vertices = new Vector3[grassBladeCount * bladeVertexCount];
+        Vector3[] vertices = new Vector3[grassBladeCount * bladeVertexCount];
         Vector2[] uv = new Vector2[grassBladeCount * bladeVertexCount];
-        for(int i = 0; i < vertices.Length; i++) {
+        for (int i = 0; i < vertices.Length; i++) {
             //赋予x坐标，为了使其作为索引在gpu中读取数组信息
             vertices[i] = new Vector3(i / bladeVertexCount, i % bladeVertexCount, 0);//0-63,0-11,0
             normals[i] = -Vector3.forward;
@@ -150,8 +239,8 @@ public class GrassBuilder : MonoBehaviour {
 
         int[] triangles = new int[6 * grassBladeCount * bladeSectionCount];
         int trii = 0;
-        for(int blade=0;blade< grassBladeCount; blade++) {
-            for(int section = 0; section < bladeSectionCount; section++) {
+        for (int blade = 0; blade < grassBladeCount; blade++) {
+            for (int section = 0; section < bladeSectionCount; section++) {
                 int start = blade * bladeVertexCount + section * 2;
                 triangles[trii] = start;
                 triangles[trii + 1] = start + 3;
@@ -169,25 +258,13 @@ public class GrassBuilder : MonoBehaviour {
         return result;
     }
     
+
+
     /// <summary>
-    /// xz平面中点p是否在abc构成的三角形内
+    /// 更新GPU端的_tileHeightDeltaStartIndex和CPU端的matrices
     /// </summary>
-    public bool PointInTriangle(Vector3 a, Vector3 b, Vector3 c, Vector3 p) {
-        float v2x = (p - a).x, v2y = (p - a).z;
-        float v0x = (c - a).x, v0y = (c - a).z;
-        float v1x = (b - a).x, v1y = (b - a).z;
-        float v = (v0x * v2y - v0y * v2x) / (v0x * v1y - v0y * v1x);
-        float u = (v1x * v2y - v1y * v2x) / (v0y * v1x - v0x * v1y);
-        if (u < 0 || u > 1) // if u out of range, return directly
-            return false;
-
-        if (v < 0 || v > 1) // if v out of range, return directly
-            return false;
-        return u + v <= 1;
-    }
-
-
-
+    /// <param name="tiles"></param>
+    /// <returns></returns>
     MaterialPropertyBlock UpdateGrassInfo(List<Vector2Int> tiles) {
         prop = new MaterialPropertyBlock();
         matrices = new Matrix4x4[tiles.Count];
@@ -219,28 +296,43 @@ public class GrassBuilder : MonoBehaviour {
         tBuilder = GameObject.Find("terrain").GetComponent<TerrainBuilder>();
         grassMesh = generateGrassTile(grassAmountPerTile);
         ///grass
-        GameObject grass = new GameObject("grass", typeof(MeshRenderer),typeof(MeshFilter));
+        GameObject grass = new GameObject("grass", typeof(MeshRenderer), typeof(MeshFilter));
         grass.transform.parent = transform;
         grass.GetComponent<MeshFilter>().mesh = grassMesh;
         grass.GetComponent<MeshRenderer>().sharedMaterial = grassMaterial;
 
         PregenerateGrassInfo();
-        InvokeRepeating("GrassUpdate", 0, 2);
+
+        argsBuffer = new ComputeBuffer(1, args.Length * sizeof(uint), ComputeBufferType.IndirectArguments);
+        UpdateFrustumComputeShader(Camera.main);
+        plane.GetComponent<Renderer>().sharedMaterial.mainTexture = frustumTexture;
+        /*uint x, y, z;
+        int k = frustumCalcShader.FindKernel("CamFrustumCalc");
+        frustumCalcShader.GetKernelThreadGroupSizes(k,out x, out y, out z);//8,8,1
+        Debug.Log(x + " " + y + " " + z);*/
     }
 
     void GrassUpdate() {
         tilesToRender = calculateTileToRender();
         prop = UpdateGrassInfo(tilesToRender);
     }
-    private void Update() {
-        //render grass,TODO: LOD 64 32 16
-        Graphics.DrawMeshInstanced(grassMesh, 0, grassMaterial, matrices, matrices.Length, prop);
 
+    private void Update() {
+        UpdateFrustumComputeShader(Camera.main);
+        RunComputeShader();
+        plane.transform.localScale =
+            new Vector3(PATCH_SIZE * frustumTexSizeX,
+            PATCH_SIZE * frustumTexSizeY, 1);
+        plane.transform.position = instanceBound.min +
+            new Vector3(PATCH_SIZE * frustumTexSizeX / 2, 0, PATCH_SIZE * frustumTexSizeY / 2);
+        //render grass,TODO: LOD 64 32 16
+        /*Graphics.DrawMeshInstancedIndirect(grassMesh,
+            0, grassMaterial, instanceBound, argsBuffer);*/
     }
 
-    /*private void OnDrawGizmos() {
-        Gizmos.color = Color.red;
-        for (int i = 0; i < tilesToRender.Count; i++) {
+    private void OnDrawGizmos() {
+        Gizmos.color = Color.green;
+        /*for (int i = 0; i < tilesToRender.Count; i++) {
             Gizmos.color = new Color(
                 i % 3 == 0 ? i / 1: 0,
                 i % 3 == 1 ? i / 1: 0,
@@ -250,7 +342,7 @@ public class GrassBuilder : MonoBehaviour {
             Gizmos.DrawSphere(testData[i].b, 0.3f);
             Gizmos.DrawSphere(testData[i].c, 0.3f);
             Gizmos.DrawSphere(testData[i].d, 0.3f);
-        }
-
-    }*/
+        }*/
+        Gizmos.DrawWireCube(instanceBound.center, instanceBound.size);
+    }
 }
