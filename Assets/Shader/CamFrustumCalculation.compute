@@ -8,7 +8,6 @@
 float4 frustumPosIndex[2];//[0].xy, [0].zw, [1].xy
 RWTexture2D<float4> testTexture;
 RWStructuredBuffer<uint> counter;//计数器
-RWStructuredBuffer<uint> indirectDataBuffer;
 AppendStructuredBuffer<float4> renderPosAppend;
 AppendStructuredBuffer<float3> appendBuffer;
 

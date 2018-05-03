@@ -12,6 +12,7 @@ struct TerrainData {
 
 RWStructuredBuffer<TerrainData> terrainDataBuffer;
 float4 _FrustumStartPosI;//每帧更新，视锥体块的起点
+RWStructuredBuffer<uint> indirectDataBuffer;
 
 int flattenId(int2 index, int2 mapSize) {
     return index.x + index.y * mapSize.x;
