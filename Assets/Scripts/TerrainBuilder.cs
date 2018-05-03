@@ -6,7 +6,7 @@ public class TerrainBuilder : MonoBehaviour {
     //terrain
     public Texture2D heightMap;
     public float terrainHeight = 5f;
-    public float terrainScale = 1f;
+    private float terrainScale = 1f;
     public Material terrainMat;
     [HideInInspector]
     public List<Vector3> vertices;
@@ -68,8 +68,8 @@ public class TerrainBuilder : MonoBehaviour {
     }
 
     public Vector2Int GetConstrainedTileIndex(int indexX, int indexZ) {
-        indexX = Mathf.Max(0, indexX); indexX = Mathf.Min(indexX, heightMap.width / GrassBuilder.PATCH_SIZE - 2);
-        indexZ = Mathf.Max(0, indexZ); indexZ = Mathf.Min(indexZ, heightMap.height / GrassBuilder.PATCH_SIZE - 2);
+        indexX = Mathf.Max(0, indexX); indexX = Mathf.Min(indexX, heightMap.width / GrassGenerator.PATCH_SIZE - 2);
+        indexZ = Mathf.Max(0, indexZ); indexZ = Mathf.Min(indexZ, heightMap.height / GrassGenerator.PATCH_SIZE - 2);
         return new Vector2Int(indexX, indexZ);
     }
     public Vector2Int GetConstrainedTileIndex(Vector2Int index) {
@@ -86,7 +86,7 @@ public class TerrainBuilder : MonoBehaviour {
     public Vector3 GetTilePosition(int i, int j) {
         //Debug.Log(i + "  " + j+" " + vertices.Count);
         Vector2Int index = GetConstrainedTileIndex(i, j);
-        return vertices[index.x * GrassBuilder.PATCH_SIZE * heightMap.width + index.y * GrassBuilder.PATCH_SIZE];
+        return vertices[index.x * GrassGenerator.PATCH_SIZE * heightMap.width + index.y * GrassGenerator.PATCH_SIZE];
     }
 
     public Vector3 GetTilePosition(Vector2Int index) {
@@ -94,12 +94,41 @@ public class TerrainBuilder : MonoBehaviour {
     }
 
     public Vector2Int GetTileIndex(Vector3 position) {
-        return new Vector2Int(Mathf.FloorToInt(position.x / GrassBuilder.PATCH_SIZE),
-            Mathf.FloorToInt(position.z / GrassBuilder.PATCH_SIZE));
+        return new Vector2Int(Mathf.FloorToInt(position.x / GrassGenerator.PATCH_SIZE),
+            Mathf.FloorToInt(position.z / GrassGenerator.PATCH_SIZE));
     }
 
     private void Awake() {
         BuildTerrain();
+        BuildTerrainDataBuffer();
+    }
+
+    struct TerrainData {
+        float height;
+        float hasGrass;//整数是否显示草，小数草密度
+        float grassDensity;
+        //wind
+        public TerrainData(float height) {
+            this.height = height;
+            hasGrass = 0;
+            grassDensity = 0;
+        }
+        public int size() { return sizeof(float) * 3; }
+    };
+
+    void BuildTerrainDataBuffer() {
+        int bufLen = heightMap.width * heightMap.height;
+        ComputeBuffer buffer = new ComputeBuffer(bufLen, new TerrainData().size());
+        TerrainData[] data = new TerrainData[bufLen];
+        for(int i = 0; i < heightMap.height; i++) {
+            for(int j = 0; j < heightMap.width; j++) {
+                data[i * heightMap.width + j] = 
+                    new TerrainData(heightMap.GetPixel(j, i).grayscale * terrainHeight);
+            }
+        }
+        buffer.SetData(data);
+        Shader.SetGlobalBuffer("terrainDataBuffer", buffer);
+        Shader.SetGlobalVector("terrainSize", new Vector4(heightMap.width, heightMap.height));
     }
 
 }

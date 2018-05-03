@@ -15,7 +15,7 @@ public class TerrainBuilderEditor : Editor {
         EditorGUILayout.LabelField("Terrain Generation", EditorStyles.boldLabel);
         script.heightMap = (Texture2D)EditorGUILayout.ObjectField("Height Map", script.heightMap, typeof(Texture2D), false);
         script.terrainHeight = EditorGUILayout.FloatField("Terrain Height", script.terrainHeight);
-        script.terrainScale = EditorGUILayout.FloatField("Terrain Scale", script.terrainScale);
+        //script.terrainScale = EditorGUILayout.FloatField("Terrain Scale", script.terrainScale);
         script.terrainMat= (Material)EditorGUILayout.ObjectField(
             "Terrain Material", script.terrainMat, typeof(Material), false);
         if (GUILayout.Button("Build Terrain")) {

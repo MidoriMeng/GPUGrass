@@ -32,6 +32,7 @@
             #include "UnityCG.cginc"
             #include "Lighting.cginc"
             #include "UnityInstancing.cginc"
+            #include "Data.cginc"
 
 			struct appdata
 			{
@@ -62,15 +63,10 @@
             float _Height;//草的高度
             float _Width;//草的宽度
             int _SectionCount;//草叶的分段数
-            float _TileSize;
-
-            float4 _FrustumStartPos;//每帧更新，视锥体块的起点
 
             static const float oscillateDelta = 0.05;
             static const float PI = 3.14159;
 
-            #define MAX_PATCH_SIZE 1023
-            #define _TileSize 2.0
 
             float4 _patchRootsPosDir[MAX_PATCH_SIZE];//TODO
             float _patchGrassHeight[MAX_PATCH_SIZE];
