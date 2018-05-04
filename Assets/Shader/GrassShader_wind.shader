@@ -93,7 +93,7 @@
                 uint vertexCount = (_SectionCount + 1) * 2;//12
                 float3 density = _patchDensities[bladeIndex];
                 float dir = _patchRootsPosDir[bladeIndex].w * 2 * PI,
-                    height = _patchGrassHeight[bladeIndex];
+                    height = _patchGrassHeight[bladeIndex]* _Height;
                 float4 rootLPos = _patchRootsPosDir[bladeIndex].xyzz; rootLPos.w = 0;//local pos in tile
                 //计算deltaY：本地Y增量（高低）
                 //A(0,0,0)   C(_TileSize, hdi.y, _TileSize) 
@@ -112,14 +112,14 @@
                 }
                 //形成草叶形状
                                              //return 1 or -1          //
-                float4 bladeOffset = float4((fmod(vertIndex, 2) * 2 - 1) * _Width, v.uv.y * _Height, 0, 0);
+                float4 bladeOffset = float4((fmod(vertIndex, 2) * 2 - 1) * _Width, v.uv.y *height, 0, 0);
 
                 //风
                 float3 windVec = float3(1, 0, 0);
                 //blade bending
                 float bending = fmod(bladeIndex, 3)*0.5+0.2;
-                float a = -_Height / (bending * bending), b = 2 * _Height / bending;
-                float deltaZ = (-b + sqrt(b*b + 4 * a*(v.uv.y * _Height))) / (2 * a);
+                float a = -height / (bending * bending), b = 2 * height / bending;
+                float deltaZ = (-b + sqrt(b*b + 4 * a*(v.uv.y * height))) / (2 * a);
                 o.test = deltaZ;
                 bladeOffset.z += deltaZ;
                 //blade swinging

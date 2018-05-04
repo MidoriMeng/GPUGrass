@@ -4,21 +4,14 @@ using UnityEngine;
 using UnityEngine.Rendering;
 
 public class GrassGenerator : MonoBehaviour {
-    private Mesh grassMesh;
-    //grass
     public Texture2D grassDensityMap;
-    public float grassHeightMax = 2f;
-    public const int PATCH_SIZE = 2;//Patch的长/宽
+    public const int PATCH_SIZE = 2;//Patch的边长
     public int grassAmountPerTile = 64;//实际渲染时每个Tile内最多的草叶数量
     public int pregenerateGrassAmount = 1023;//预生成Patch草体总长度
     private int bladeSectionCount = 5;//草叶分段，5段12顶点，6段14顶点
     public Material grassMaterial;
     //public float patchExpansion = 2f;//实际渲染时比视锥体范围扩展的距离，为了保证边界渲染的质量且减少视锥体裁剪的频率
-
-    private List<float> grassHeights;
-    private List<float> grassDensityIndexes;
-    //private List<Vector3> grassRoots;//草的位置
-    private List<Vector4> grassRootsDir;//草的位置+随机方向，[0,1]
+    
 
     /// <summary>
     /// 预生成草地信息数组，传输给grassMaterial
@@ -27,9 +20,9 @@ public class GrassGenerator : MonoBehaviour {
         Vector3Int startPosition = Vector3Int.zero;
         System.Random random = new System.Random();
         //grassRoots = new List<Vector3>();
-        grassRootsDir = new List<Vector4>();
-        grassHeights = new List<float>();
-        grassDensityIndexes = new List<float>();
+        List<Vector4> grassRootsDir = new List<Vector4>();//草的位置+随机方向，[0,1]
+        List<float> grassHeights = new List<float>();
+        List<float> grassDensityIndexes = new List<float>();
 
         //随机生成草根位置、方向、高度、密度索引
         for (int i = 0; i < pregenerateGrassAmount; i++) {
@@ -39,11 +32,13 @@ public class GrassGenerator : MonoBehaviour {
 
             //grassRoots.Add(root);
             grassRootsDir.Add(new Vector4(root.x, root.y, root.z, (float)random.NextDouble()));
-            grassHeights.Add(grassHeightMax * 0.5f + grassHeightMax * 0.5f * (float)random.NextDouble());
+            grassHeights.Add(0.5f + 0.5f * (float)random.NextDouble());
             grassDensityIndexes.Add((float)random.NextDouble());
         }
 
         //send to gpu
+        grassMaterial.SetInt("_SectionCount", bladeSectionCount);
+        Shader.SetGlobalFloat("_TileSize", PATCH_SIZE);
         grassMaterial.SetVectorArray(Shader.PropertyToID("_patchRootsPosDir"), grassRootsDir);
         grassMaterial.SetFloatArray(Shader.PropertyToID("_patchGrassHeight"), grassHeights);
         grassMaterial.SetFloatArray(Shader.PropertyToID("_patchDensities"), grassDensityIndexes);
@@ -89,25 +84,11 @@ public class GrassGenerator : MonoBehaviour {
         return result;
     }
 
-
-    void Start() {
-        grassMaterial.SetInt("_SectionCount", bladeSectionCount);
-        //tBuilder = GameObject.Find("terrain").GetComponent<TerrainBuilder>();
-        
-        ///grass
+    
+    ///show grass
         /*GameObject grass = new GameObject("grass", typeof(MeshRenderer), typeof(MeshFilter));
         grass.transform.parent = transform;
         grass.GetComponent<MeshFilter>().mesh = grassMesh;
         grass.GetComponent<MeshRenderer>().sharedMaterial = grassMaterial;
         */
-        PregenerateGrassInfo();
-        //渲染计算
-        /*uint x, y, z;
-        frustumCalcShader.GetKernelThreadGroupSizes(frustumKernel,out x, out y, out z);//8,8,1
-        Debug.Log(x + " " + y + " " + z);*/
-    }
-
-    private void Update() {
-        
-    }
 }

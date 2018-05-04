@@ -8,8 +8,6 @@ public class TerrainBuilder : MonoBehaviour {
     public float terrainHeight = 5f;
     private float terrainScale = 1f;
     public Material terrainMat;
-    [HideInInspector]
-    public List<Vector3> vertices;
 
     /// <summary>
     /// 根据指定的高度图生成地面网格，将地表信息存储到tilebuffer
@@ -27,7 +25,7 @@ public class TerrainBuilder : MonoBehaviour {
             collider = gameObject.AddComponent<MeshCollider>();
 
         //生成地形
-        vertices = new List<Vector3>();
+        List<Vector3>  vertices = new List<Vector3>();
         List<int> triangles = new List<int>();
 
         for (int i = 0; i < heightMap.width; i++) {
@@ -67,6 +65,22 @@ public class TerrainBuilder : MonoBehaviour {
         collider.sharedMesh = terrainMesh;
     }
 
+    public void BuildTerrainDataBuffer() {
+        int bufLen = heightMap.width * heightMap.height;
+        ComputeBuffer buffer = new ComputeBuffer(bufLen, new TerrainData().size());
+        TerrainData[] data = new TerrainData[bufLen];
+        for (int i = 0; i < heightMap.height; i++) {
+            for (int j = 0; j < heightMap.width; j++) {
+                data[i * heightMap.width + j] =
+                    new TerrainData(heightMap.GetPixel(j, i).grayscale * terrainHeight);
+            }
+        }
+        buffer.SetData(data);
+        Shader.SetGlobalBuffer("terrainDataBuffer", buffer);
+        Shader.SetGlobalVector("terrainSize", new Vector4(heightMap.width, heightMap.height));
+    }
+
+
     public Vector2Int GetConstrainedTileIndex(int indexX, int indexZ) {
         indexX = Mathf.Max(0, indexX); indexX = Mathf.Min(indexX, heightMap.width / GrassGenerator.PATCH_SIZE - 2);
         indexZ = Mathf.Max(0, indexZ); indexZ = Mathf.Min(indexZ, heightMap.height / GrassGenerator.PATCH_SIZE - 2);
@@ -84,9 +98,10 @@ public class TerrainBuilder : MonoBehaviour {
     /// 从vertices读取位置
     /// </summary>
     public Vector3 GetTilePosition(int i, int j) {
-        //Debug.Log(i + "  " + j+" " + vertices.Count);
         Vector2Int index = GetConstrainedTileIndex(i, j);
-        return vertices[index.x * GrassGenerator.PATCH_SIZE * heightMap.width + index.y * GrassGenerator.PATCH_SIZE];
+        float height= heightMap.GetPixel(index.x, index.y).grayscale * terrainHeight;
+        return new Vector3(index.x * terrainScale, height, index.y * terrainScale);
+        //return vertices[index.x * GrassGenerator.PATCH_SIZE * heightMap.width + index.y * GrassGenerator.PATCH_SIZE];
     }
 
     public Vector3 GetTilePosition(Vector2Int index) {
@@ -97,11 +112,7 @@ public class TerrainBuilder : MonoBehaviour {
         return new Vector2Int(Mathf.FloorToInt(position.x / GrassGenerator.PATCH_SIZE),
             Mathf.FloorToInt(position.z / GrassGenerator.PATCH_SIZE));
     }
-
-    private void Awake() {
-        BuildTerrain();
-        BuildTerrainDataBuffer();
-    }
+    
 
     struct TerrainData {
         float height;
@@ -116,19 +127,5 @@ public class TerrainBuilder : MonoBehaviour {
         public int size() { return sizeof(float) * 3; }
     };
 
-    void BuildTerrainDataBuffer() {
-        int bufLen = heightMap.width * heightMap.height;
-        ComputeBuffer buffer = new ComputeBuffer(bufLen, new TerrainData().size());
-        TerrainData[] data = new TerrainData[bufLen];
-        for(int i = 0; i < heightMap.height; i++) {
-            for(int j = 0; j < heightMap.width; j++) {
-                data[i * heightMap.width + j] = 
-                    new TerrainData(heightMap.GetPixel(j, i).grayscale * terrainHeight);
-            }
-        }
-        buffer.SetData(data);
-        Shader.SetGlobalBuffer("terrainDataBuffer", buffer);
-        Shader.SetGlobalVector("terrainSize", new Vector4(heightMap.width, heightMap.height));
-    }
 
 }
