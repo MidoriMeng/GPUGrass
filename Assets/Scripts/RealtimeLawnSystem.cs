@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 public class RealtimeLawnSystem : MonoBehaviour {
-    public GrassGenerator grass;
+    public GrassGenerator grassGen;
     public TerrainBuilder terrain;
     public FrustumCalculation frustumCalc;
     private Mesh grassMesh;
@@ -14,8 +14,8 @@ public class RealtimeLawnSystem : MonoBehaviour {
     // Use this for initialization
     void Start() {
         //草叶
-        grassMesh = grass.generateGrassTile();
-        grass.PregenerateGrassInfo();
+        grassMesh = grassGen.generateGrassTile();
+        grassGen.PregenerateGrassInfo();
         //地形
         terrain.BuildTerrain();
         terrain.BuildTerrainDataBuffer();
@@ -32,12 +32,12 @@ public class RealtimeLawnSystem : MonoBehaviour {
     // Update is called once per frame
     void Update() {
         //视锥体计算
-        instanceBound = frustumCalc.UpdateFrustumComputeShader(Camera.main);
+        instanceBound = frustumCalc.UpdateComputeShader(Camera.main);
         frustumCalc.RunComputeShader();
 
         //render grass,TODO: LOD 64 32 16
         Graphics.DrawMeshInstancedIndirect(grassMesh,
-            0, grass.grassMaterial, instanceBound, argsBuffer);
+            0, grassGen.grassMaterial, instanceBound, argsBuffer);
 
         /*uint x, y, z;//test
         frustumCalcShader.GetKernelThreadGroupSizes(frustumKernel,out x, out y, out z);//8,8,1

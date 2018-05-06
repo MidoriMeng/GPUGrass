@@ -12,7 +12,7 @@ public class FrustumCalculation : MonoBehaviour {
     private int frustumKernel = 0;
     public GameObject plane;//for test
     private RenderTexture frustumTexture;//有用但不必放在这里，是为了测试
-    ComputeBuffer renderPosAppendBuffer;
+    ComputeBuffer renderPosAppendBuffer;//同上
     ComputeBuffer counterBuffer;
 
     private Bounds boundMin;//test
@@ -23,7 +23,7 @@ public class FrustumCalculation : MonoBehaviour {
     /// grassMaterial的_FrustumStartPosI和instanceBound
     /// </summary>
     /// <param name="camera"></param>
-    public Bounds UpdateFrustumComputeShader(Camera camera) {
+    public Bounds UpdateComputeShader(Camera camera) {
         Vector3[] frustum = new Vector3[3];
         //想传6个整数，但unity的computeShader.SetInts和SetFloats有问题
         Vector4[] frusIndex = { Vector4.zero, Vector4.zero };
@@ -122,7 +122,7 @@ public class FrustumCalculation : MonoBehaviour {
         }
         Debug.Log(str);
         //test plane
-        int patchSize = GrassGenerator.PATCH_SIZE;
+        int patchSize = TerrainBuilder.PATCH_SIZE;
         plane.transform.localScale =
             new Vector3(patchSize * texSize.x,
             patchSize * texSize.y, 1);
@@ -130,7 +130,7 @@ public class FrustumCalculation : MonoBehaviour {
             new Vector3(patchSize * texSize.x / 2,
             0, patchSize * texSize.y / 2);
 
-        counterBuffer.SetCounterValue(0);
+        counterBuffer.SetCounterValue(0);//应该放到run中
     }
 
 

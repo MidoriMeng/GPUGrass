@@ -5,7 +5,6 @@ using UnityEngine.Rendering;
 
 public class GrassGenerator : MonoBehaviour {
     public Texture2D grassDensityMap;
-    public const int PATCH_SIZE = 2;//Patch的边长
     public int grassAmountPerTile = 64;//实际渲染时每个Tile内最多的草叶数量
     public int pregenerateGrassAmount = 1023;//预生成Patch草体总长度
     private int bladeSectionCount = 5;//草叶分段，5段12顶点，6段14顶点
@@ -23,7 +22,7 @@ public class GrassGenerator : MonoBehaviour {
         List<Vector4> grassRootsDir = new List<Vector4>();//草的位置+随机方向，[0,1]
         List<float> grassHeights = new List<float>();
         List<float> grassDensityIndexes = new List<float>();
-
+        int PATCH_SIZE = TerrainBuilder.PATCH_SIZE;
         //随机生成草根位置、方向、高度、密度索引
         for (int i = 0; i < pregenerateGrassAmount; i++) {
             float deltaX = (float)random.NextDouble();

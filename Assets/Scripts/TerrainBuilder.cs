@@ -7,6 +7,7 @@ public class TerrainBuilder : MonoBehaviour {
     public Texture2D heightMap;
     public float terrainHeight = 5f;
     private float terrainScale = 1f;
+    public const int PATCH_SIZE = 2;//Patch的边长
     public Material terrainMat;
 
     /// <summary>
@@ -82,8 +83,8 @@ public class TerrainBuilder : MonoBehaviour {
 
 
     public Vector2Int GetConstrainedTileIndex(int indexX, int indexZ) {
-        indexX = Mathf.Max(0, indexX); indexX = Mathf.Min(indexX, heightMap.width / GrassGenerator.PATCH_SIZE - 2);
-        indexZ = Mathf.Max(0, indexZ); indexZ = Mathf.Min(indexZ, heightMap.height / GrassGenerator.PATCH_SIZE - 2);
+        indexX = Mathf.Max(0, indexX); indexX = Mathf.Min(indexX, heightMap.width / PATCH_SIZE - 2);
+        indexZ = Mathf.Max(0, indexZ); indexZ = Mathf.Min(indexZ, heightMap.height / PATCH_SIZE - 2);
         return new Vector2Int(indexX, indexZ);
     }
     public Vector2Int GetConstrainedTileIndex(Vector2Int index) {
@@ -109,8 +110,8 @@ public class TerrainBuilder : MonoBehaviour {
     }
 
     public Vector2Int GetTileIndex(Vector3 position) {
-        return new Vector2Int(Mathf.FloorToInt(position.x / GrassGenerator.PATCH_SIZE),
-            Mathf.FloorToInt(position.z / GrassGenerator.PATCH_SIZE));
+        return new Vector2Int(Mathf.FloorToInt(position.x / PATCH_SIZE),
+            Mathf.FloorToInt(position.z / PATCH_SIZE));
     }
     
 
