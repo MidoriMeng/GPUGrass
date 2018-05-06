@@ -36,8 +36,8 @@ public class RealtimeLawnSystem : MonoBehaviour {
         frustumCalc.RunComputeShader();
 
         //render grass,TODO: LOD 64 32 16
-        Graphics.DrawMeshInstancedIndirect(grassMesh,
-            0, grassGen.grassMaterial, instanceBound, argsBuffer);
+        /*Graphics.DrawMeshInstancedIndirect(grassMesh,
+            0, grassGen.grassMaterial, instanceBound, argsBuffer);*/
 
         /*uint x, y, z;//test
         frustumCalcShader.GetKernelThreadGroupSizes(frustumKernel,out x, out y, out z);//8,8,1

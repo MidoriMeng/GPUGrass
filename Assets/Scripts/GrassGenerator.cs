@@ -1,7 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
-using UnityEngine.Rendering;
+﻿using UnityEngine;
 
 public class GrassGenerator : MonoBehaviour {
     public Texture2D grassDensityMap;
@@ -11,6 +8,13 @@ public class GrassGenerator : MonoBehaviour {
     public Material grassMaterial;
     //public float patchExpansion = 2f;//实际渲染时比视锥体范围扩展的距离，为了保证边界渲染的质量且减少视锥体裁剪的频率
     
+    struct GrassData {
+        public float height, density;
+        public Vector4 rootDir;
+        public GrassData(float height, float density, Vector4 rootDir) {
+            this.height = height;this.density = density;this.rootDir = rootDir;
+        }
+    };
 
     /// <summary>
     /// 预生成草地信息数组，传输给grassMaterial
@@ -18,10 +22,7 @@ public class GrassGenerator : MonoBehaviour {
     public void PregenerateGrassInfo() {
         Vector3Int startPosition = Vector3Int.zero;
         System.Random random = new System.Random();
-        //grassRoots = new List<Vector3>();
-        List<Vector4> grassRootsDir = new List<Vector4>();//草的位置+随机方向，[0,1]
-        List<float> grassHeights = new List<float>();
-        List<float> grassDensityIndexes = new List<float>();
+        GrassData[] grassData = new GrassData[pregenerateGrassAmount];
         int PATCH_SIZE = TerrainBuilder.PATCH_SIZE;
         //随机生成草根位置、方向、高度、密度索引
         for (int i = 0; i < pregenerateGrassAmount; i++) {
@@ -29,18 +30,17 @@ public class GrassGenerator : MonoBehaviour {
             float deltaZ = (float)random.NextDouble();
             Vector3 root = new Vector3(deltaX * PATCH_SIZE, 0, deltaZ * PATCH_SIZE);
 
-            //grassRoots.Add(root);
-            grassRootsDir.Add(new Vector4(root.x, root.y, root.z, (float)random.NextDouble()));
-            grassHeights.Add(0.5f + 0.5f * (float)random.NextDouble());
-            grassDensityIndexes.Add((float)random.NextDouble());
+            GrassData data = new GrassData(0.5f + 0.5f * (float)random.NextDouble(),
+                (float)random.NextDouble(),
+                new Vector4(root.x, root.y, root.z, (float)random.NextDouble()));
+            grassData[i] = data;
         }
-
+        ComputeBuffer grassBuffer = new ComputeBuffer(pregenerateGrassAmount, sizeof(float) * 6);
+        grassBuffer.SetData(grassData);
         //send to gpu
         grassMaterial.SetInt("_SectionCount", bladeSectionCount);
         Shader.SetGlobalFloat("_TileSize", PATCH_SIZE);
-        grassMaterial.SetVectorArray(Shader.PropertyToID("_patchRootsPosDir"), grassRootsDir);
-        grassMaterial.SetFloatArray(Shader.PropertyToID("_patchGrassHeight"), grassHeights);
-        grassMaterial.SetFloatArray(Shader.PropertyToID("_patchDensities"), grassDensityIndexes);
+        grassMaterial.SetBuffer("_patchData", grassBuffer);
     }
 
 

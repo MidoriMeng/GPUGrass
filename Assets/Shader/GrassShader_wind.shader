@@ -51,6 +51,11 @@
                 float3 test: TEXCOORD2;
 			};
 
+            struct GrassData {
+                float height, density;
+                float4 rootDir;
+            };
+
             //每帧更新
             UNITY_INSTANCING_BUFFER_START(Props)
                 UNITY_DEFINE_INSTANCED_PROP(float4, _tileHeightDeltaStartIndex)
@@ -71,6 +76,7 @@
             float4 _patchRootsPosDir[MAX_PATCH_SIZE];//TODO
             float _patchGrassHeight[MAX_PATCH_SIZE];
             float _patchDensities[MAX_PATCH_SIZE];
+            StructuredBuffer<GrassData> _patchData;
 			
 
             float getY(float x2, float y2, float z2, float x3, float y3, float z3, float x4, float z4) {
@@ -91,10 +97,11 @@
                 uint vertIndex = v.vertex.y;//0~11
                 uint bladeIndex = v.vertex.x + hdi.w;//0~63+0~1023-64
                 uint vertexCount = (_SectionCount + 1) * 2;//12
-                float3 density = _patchDensities[bladeIndex];
-                float dir = _patchRootsPosDir[bladeIndex].w * 2 * PI,
-                    height = _patchGrassHeight[bladeIndex]* _Height;
-                float4 rootLPos = _patchRootsPosDir[bladeIndex].xyzz; rootLPos.w = 0;//local pos in tile
+                GrassData patchInfo = _patchData[bladeIndex];
+                float density = patchInfo.density;
+                float dir = patchInfo.rootDir.w * 2 * PI,
+                    height = patchInfo.height * _Height;
+                float4 rootLPos = patchInfo.rootDir.xyzz; rootLPos.w = 0;//local pos in tile
                 //计算deltaY：本地Y增量（高低）
                 //A(0,0,0)   C(_TileSize, hdi.y, _TileSize) 
                 //B(_TileSize, hdi.x, 0)   D(0, hdi.z, _TileSize)

@@ -1,5 +1,5 @@
 ﻿#include "Data.cginc"
-#pragma kernel CamFrustumCalc
+#pragma kernel FrustumCulling
 
 #define NUM_THREADS 2
 #define NUM_THREADS_X NUM_THREADS
@@ -34,7 +34,7 @@ float PointInTriangle(int2 a, int2 b, int2 c, int2 p) {
 }
 
 [numthreads(NUM_THREADS_X, NUM_THREADS_Y,1)]
-void CamFrustumCalc (uint3 id : SV_DispatchThreadID)
+void FrustumCulling (uint3 id : SV_DispatchThreadID)
 {
     //numthreads
     uint hasGrass = PointInTriangle(frustumPosIndex[0].xy, frustumPosIndex[0].zw,

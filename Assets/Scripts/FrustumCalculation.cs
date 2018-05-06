@@ -98,7 +98,7 @@ public class FrustumCalculation : MonoBehaviour {
         tBuilder = GameObject.Find("terrain").GetComponent<TerrainBuilder>();
 
         //setup
-        frustumKernel = calcShader.FindKernel("CamFrustumCalc");
+        frustumKernel = calcShader.FindKernel("FrustumCulling");
         renderPosAppendBuffer = new ComputeBuffer(1, sizeof(float) * 4, ComputeBufferType.Append);
         renderPosAppendBuffer.SetCounterValue(0);
         counterBuffer = new ComputeBuffer(1, sizeof(int), ComputeBufferType.Counter);
