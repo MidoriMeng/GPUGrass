@@ -1,13 +1,14 @@
 ﻿using UnityEngine;
 
-public class GrassGenerator : MonoBehaviour {
-    public Texture2D grassDensityMap;
-    public int grassAmountPerTile = 64;//实际渲染时每个Tile内最多的草叶数量
-    public int pregenerateGrassAmount = 1023;//预生成Patch草体总长度
+public class GrassGenerator {
+    private Texture2D grassDensityMap;
+    private int grassAmountPerTile = 64;//实际渲染时每个Tile内最多的草叶数量
+    private int pregenerateGrassAmount = 1023;//预生成Patch草体总长度
+    private Material grassMaterial;
+    private float patchSize;
+
     private int bladeSectionCount = 5;//草叶分段，5段12顶点，6段14顶点
-    public Material grassMaterial;
-    //public float patchExpansion = 2f;//实际渲染时比视锥体范围扩展的距离，为了保证边界渲染的质量且减少视锥体裁剪的频率
-    
+
     struct GrassData {
         public float height, density;
         public Vector4 rootDir;
@@ -23,12 +24,11 @@ public class GrassGenerator : MonoBehaviour {
         Vector3Int startPosition = Vector3Int.zero;
         System.Random random = new System.Random();
         GrassData[] grassData = new GrassData[pregenerateGrassAmount];
-        int PATCH_SIZE = TerrainBuilder.PATCH_SIZE;
         //随机生成草根位置、方向、高度、密度索引
         for (int i = 0; i < pregenerateGrassAmount; i++) {
             float deltaX = (float)random.NextDouble();
             float deltaZ = (float)random.NextDouble();
-            Vector3 root = new Vector3(deltaX * PATCH_SIZE, 0, deltaZ * PATCH_SIZE);
+            Vector3 root = new Vector3(deltaX * patchSize, 0, deltaZ * patchSize);
 
             GrassData data = new GrassData(0.5f + 0.5f * (float)random.NextDouble(),
                 (float)random.NextDouble(),
@@ -39,7 +39,7 @@ public class GrassGenerator : MonoBehaviour {
         grassBuffer.SetData(grassData);
         //send to gpu
         grassMaterial.SetInt("_SectionCount", bladeSectionCount);
-        Shader.SetGlobalFloat("_TileSize", PATCH_SIZE);
+        Shader.SetGlobalFloat("_TileSize", patchSize);
         grassMaterial.SetBuffer("_patchData", grassBuffer);
     }
 
@@ -83,7 +83,14 @@ public class GrassGenerator : MonoBehaviour {
         return result;
     }
 
-    
+    public GrassGenerator(Texture2D densityMap, int grassAmountPTile, int pregenerateLen, Material grass, float patchSize) {
+        grassDensityMap = densityMap;
+        grassAmountPerTile = grassAmountPTile;
+        pregenerateGrassAmount = pregenerateLen;
+        grassMaterial = grass;
+        this.patchSize = patchSize;
+    }
+
     ///show grass
         /*GameObject grass = new GameObject("grass", typeof(MeshRenderer), typeof(MeshFilter));
         grass.transform.parent = transform;

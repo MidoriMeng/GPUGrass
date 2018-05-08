@@ -2,28 +2,24 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class TerrainBuilder : MonoBehaviour {
-    //terrain
-    public Texture2D heightMap;
-    public float terrainHeight = 5f;
-    private float terrainScale = 1f;
+public class TerrainBuilder {
+    private Texture2D heightMap;
+    private float terrainHeight = 5f;
     public const int PATCH_SIZE = 2;//Patch的边长
-    public Material terrainMat;
+    private Material terrainMat;
+
+    private float terrainScale = 1f;
 
     /// <summary>
     /// 根据指定的高度图生成地面网格，将地表信息存储到tilebuffer
     /// </summary>
-    public void BuildTerrain() {
+    public GameObject BuildTerrain(Transform parent) {
         //重新生成地形前需要清除之前的信息
-        MeshFilter filter = GetComponent<MeshFilter>();
-        if (!filter)
-            filter = gameObject.AddComponent<MeshFilter>();
-        MeshRenderer renderer = GetComponent<MeshRenderer>();
-        if (!renderer)
-            renderer = gameObject.AddComponent<MeshRenderer>();
-        MeshCollider collider = GetComponent<MeshCollider>();
-        if (!collider)
-            collider = gameObject.AddComponent<MeshCollider>();
+        GameObject obj = new GameObject("terrain", typeof(MeshFilter),typeof(MeshRenderer),typeof(MeshCollider));
+        obj.transform.parent = parent;
+        MeshFilter filter = obj.GetComponent<MeshFilter>();
+        MeshRenderer renderer = obj.GetComponent<MeshRenderer>();
+        MeshCollider collider = obj.GetComponent<MeshCollider>();
 
         //生成地形
         List<Vector3>  vertices = new List<Vector3>();
@@ -64,6 +60,7 @@ public class TerrainBuilder : MonoBehaviour {
         terrainMesh.RecalculateNormals();
         filter.mesh = terrainMesh;
         collider.sharedMesh = terrainMesh;
+        return obj;
     }
 
     public void BuildTerrainDataBuffer() {
@@ -128,5 +125,9 @@ public class TerrainBuilder : MonoBehaviour {
         public int size() { return sizeof(float) * 3; }
     };
 
-
+    public TerrainBuilder(Texture2D heightMap, float terrainHeight,Material terrainMat) {
+        this.heightMap = heightMap;
+        this.terrainHeight = terrainHeight;
+        this.terrainMat = terrainMat;
+    }
 }

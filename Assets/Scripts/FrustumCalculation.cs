@@ -2,20 +2,19 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class FrustumCalculation : MonoBehaviour {
+public class FrustumCalculation {
+    private ComputeShader calcShader;
     private TerrainBuilder tBuilder;
 
-    //frustum calc
-    public ComputeShader calcShader;
     private Vector2Int texSize = new Vector2Int();
     private Vector2Int threadGroupSize = new Vector2Int(2, 2);
     private int frustumKernel = 0;
-    public GameObject plane;//for test
+    //public GameObject plane;//for test
     private RenderTexture frustumTexture;//有用但不必放在这里，是为了测试
     ComputeBuffer renderPosAppendBuffer;//同上
     ComputeBuffer counterBuffer;
 
-    private Bounds boundMin;//test
+    //private Bounds boundMin;//test
 
 
     /// <summary>
@@ -23,7 +22,8 @@ public class FrustumCalculation : MonoBehaviour {
     /// grassMaterial的_FrustumStartPosI和instanceBound
     /// </summary>
     /// <param name="camera"></param>
-    public Bounds UpdateComputeShader(Camera camera) {
+    public Bounds Run(Camera camera) {
+        counterBuffer.SetCounterValue(0);
         Vector3[] frustum = new Vector3[3];
         //想传6个整数，但unity的computeShader.SetInts和SetFloats有问题
         Vector4[] frusIndex = { Vector4.zero, Vector4.zero };
@@ -56,15 +56,17 @@ public class FrustumCalculation : MonoBehaviour {
             if (((newTexSizeY >> i) & 1) == 1) { digit = i + 1; break; }
         newTexSizeY = 1 << digit;
         #endregion
-        if (newTexSizeX != texSize.x || newTexSizeY != texSize.y) {
+        #region for test
+        /*if (newTexSizeX != texSize.x || newTexSizeY != texSize.y) {
             //new testTexture texture
             //for test
             frustumTexture = new RenderTexture(newTexSizeX, newTexSizeY, 24);
             frustumTexture.enableRandomWrite = true;
             frustumTexture.Create();
             calcShader.SetTexture(frustumKernel, "testTexture", frustumTexture);
-            plane.GetComponent<Renderer>().sharedMaterial.mainTexture = frustumTexture;
-        }
+            //plane.GetComponent<Renderer>().sharedMaterial.mainTexture = frustumTexture;
+        }*/
+        #endregion
         texSize.x = newTexSizeX; texSize.y = newTexSizeY;
 
         for (int i = 0; i < 3; i++) {
@@ -80,23 +82,16 @@ public class FrustumCalculation : MonoBehaviour {
         var f = tBuilder.GetTileIndex(camBound.min);
         Shader.SetGlobalVector(Shader.PropertyToID("_FrustumStartPosI"),
             new Vector4(f.x, f.y));
-        boundMin = camBound;//test
+        //boundMin = camBound;//test
+
+        calcShader.Dispatch(frustumKernel, texSize.x / threadGroupSize.x,
+            texSize.y / threadGroupSize.y, 1);
         return camBound;
     }
 
 
-    public void RunComputeShader() {
-        //运行shader  参数1=kid  参数2=线程组在x维度的数量 参数3=线程组在y维度的数量 参数4=线程组在z维度的数量
-        calcShader.Dispatch(frustumKernel, texSize.x / threadGroupSize.x,
-            texSize.y / threadGroupSize.y, 1);
-        //Debug.Log(frustumTexSizeX / threadGroupSizeX + "   " +frustumTexSizeY / threadGroupSizeY);
-    }
-
-    
-    // Use this for initialization
-    void Start () {
-        tBuilder = GameObject.Find("terrain").GetComponent<TerrainBuilder>();
-
+    public FrustumCalculation(ComputeShader shader, TerrainBuilder t) {
+        tBuilder = t; calcShader = shader;
         //setup
         frustumKernel = calcShader.FindKernel("FrustumCulling");
         renderPosAppendBuffer = new ComputeBuffer(1, sizeof(float) * 4, ComputeBufferType.Append);
@@ -106,11 +101,10 @@ public class FrustumCalculation : MonoBehaviour {
         calcShader.SetBuffer(frustumKernel, "renderPosAppend", renderPosAppendBuffer);
         calcShader.SetBuffer(frustumKernel, "counter", counterBuffer);
         //test
-        plane.GetComponent<Renderer>().sharedMaterial.mainTexture = frustumTexture;
+        //plane.GetComponent<Renderer>().sharedMaterial.mainTexture = frustumTexture;
     }
-	
-	// Update is called once per frame
-	void Update () {
+
+    public void forDebug() {
         //test
         int[] argNum = { 0 };
         counterBuffer.GetData(argNum);
@@ -122,15 +116,14 @@ public class FrustumCalculation : MonoBehaviour {
         }
         Debug.Log(str);
         //test plane
-        int patchSize = TerrainBuilder.PATCH_SIZE;
+        /*int patchSize = TerrainBuilder.PATCH_SIZE;
         plane.transform.localScale =
             new Vector3(patchSize * texSize.x,
             patchSize * texSize.y, 1);
         plane.transform.position = boundMin.min +
             new Vector3(patchSize * texSize.x / 2,
-            0, patchSize * texSize.y / 2);
+            0, patchSize * texSize.y / 2);*/
 
-        counterBuffer.SetCounterValue(0);//应该放到run中
     }
 
 

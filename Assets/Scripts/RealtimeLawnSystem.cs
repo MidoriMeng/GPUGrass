@@ -3,22 +3,42 @@ using System.Collections.Generic;
 using UnityEngine;
 
 public class RealtimeLawnSystem : MonoBehaviour {
-    public GrassGenerator grassGen;
-    public TerrainBuilder terrain;
-    public FrustumCalculation frustumCalc;
+    //frustum
+    public ComputeShader calcShader;
+    //grass
+    public Texture2D grassDensityMap;
+    public int grassAmountPerTile = 64;//实际渲染时每个Tile内最多的草叶数量
+    public int pregenerateGrassAmount = 1023;//预生成Patch草体总长度
+    public Material grassMaterial;
+    //terrain
+    public Texture2D heightMap;
+    public float terrainHeight = 5f;
+    public const int PATCH_SIZE = 2;//Patch的边长
+    public Material terrainMat;
+
+    private GrassGenerator grassGen;
+    private TerrainBuilder terrainBuilder;
+    private FrustumCalculation frustumCalc;
     private Mesh grassMesh;
 
     //indirect
     private ComputeBuffer argsBuffer;
     private Bounds instanceBound;
-    // Use this for initialization
-    void Start() {
+
+    void Awake() {
+        //地形
+        terrainBuilder = new TerrainBuilder(heightMap, terrainHeight, terrainMat);
+        GameObject terrain = GameObject.Find("terrain");
+        if (!terrain)
+            terrainBuilder.BuildTerrain(transform);
+        terrainBuilder.BuildTerrainDataBuffer();
         //草叶
+        grassGen = new GrassGenerator(grassDensityMap, grassAmountPerTile,
+            pregenerateGrassAmount, grassMaterial,TerrainBuilder.PATCH_SIZE);
         grassMesh = grassGen.generateGrassTile();
         grassGen.PregenerateGrassInfo();
-        //地形
-        terrain.BuildTerrain();
-        terrain.BuildTerrainDataBuffer();
+        //视锥体
+        frustumCalc = new FrustumCalculation(calcShader, terrainBuilder);
 
         //draw indirect arguments
         uint meshIndicesNum = (uint)grassMesh.vertices.Length;//grassMesh.GetIndexCount(0);
@@ -29,11 +49,10 @@ public class RealtimeLawnSystem : MonoBehaviour {
         Shader.SetGlobalBuffer("indirectDataBuffer", argsBuffer);
     }
 
-    // Update is called once per frame
     void Update() {
         //视锥体计算
-        instanceBound = frustumCalc.UpdateComputeShader(Camera.main);
-        frustumCalc.RunComputeShader();
+        instanceBound = frustumCalc.Run(Camera.main);
+        frustumCalc.forDebug();
 
         //render grass,TODO: LOD 64 32 16
         /*Graphics.DrawMeshInstancedIndirect(grassMesh,
@@ -47,5 +66,13 @@ public class RealtimeLawnSystem : MonoBehaviour {
     private void OnDrawGizmos() {
         Gizmos.color = Color.green;
         Gizmos.DrawWireCube(instanceBound.center, instanceBound.size);
+    }
+
+    public void BuildTerrainTool() {
+        terrainBuilder = new TerrainBuilder(heightMap, terrainHeight, terrainMat);
+        GameObject terrain = GameObject.Find("terrain");
+        if(terrain)
+            DestroyImmediate(terrain);
+        terrainBuilder.BuildTerrain(transform);
     }
 }

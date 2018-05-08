@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
-
+/*
 [CustomEditor(typeof(TerrainBuilder))]
 public class TerrainBuilderEditor : Editor {
 
@@ -22,4 +22,4 @@ public class TerrainBuilderEditor : Editor {
             script.BuildTerrain();
         }
     }
-}
+}*/
