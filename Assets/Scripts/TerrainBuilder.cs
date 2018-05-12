@@ -7,6 +7,7 @@ public class TerrainBuilder {
     private float terrainHeight = 5f;
     public const int PATCH_SIZE = 2;//Patch的边长
     private Material terrainMat;
+    private ComputeBuffer terrainDataBuffer;
 
     private float terrainScale = 1f;
 
@@ -63,9 +64,9 @@ public class TerrainBuilder {
         return obj;
     }
 
-    public void BuildTerrainDataBuffer() {
+    public ComputeBuffer BuildTerrainDataBuffer() {
         int bufLen = heightMap.width * heightMap.height;
-        ComputeBuffer buffer = new ComputeBuffer(bufLen, new TerrainData().size());
+        terrainDataBuffer = new ComputeBuffer(bufLen, new TerrainData().size());
         TerrainData[] data = new TerrainData[bufLen];
         for (int i = 0; i < heightMap.height; i++) {
             for (int j = 0; j < heightMap.width; j++) {
@@ -73,9 +74,8 @@ public class TerrainBuilder {
                     new TerrainData(heightMap.GetPixel(j, i).grayscale * terrainHeight);
             }
         }
-        buffer.SetData(data);
-        Shader.SetGlobalBuffer("terrainDataBuffer", buffer);
-        Shader.SetGlobalVector("terrainSize", new Vector4(heightMap.width, heightMap.height));
+        terrainDataBuffer.SetData(data);
+        return terrainDataBuffer;
     }
 
 
@@ -110,8 +110,10 @@ public class TerrainBuilder {
         return new Vector2Int(Mathf.FloorToInt(position.x / PATCH_SIZE),
             Mathf.FloorToInt(position.z / PATCH_SIZE));
     }
-    
 
+    public void ReleaseBuffer() {
+        terrainDataBuffer.Release();
+    }
     struct TerrainData {
         float height;
         float hasGrass;//整数是否显示草，小数草密度
@@ -130,4 +132,5 @@ public class TerrainBuilder {
         this.terrainHeight = terrainHeight;
         this.terrainMat = terrainMat;
     }
+    
 }

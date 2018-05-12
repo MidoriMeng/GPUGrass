@@ -6,17 +6,15 @@
 #define NUM_THREADS_Y NUM_THREADS
 
 float4 frustumPosIndex[2];//[0].xy, [0].zw, [1].xy
-RWTexture2D<float4> testTexture;
 RWStructuredBuffer<uint> counter;//计数器
-AppendStructuredBuffer<float4> renderPosAppend;
-AppendStructuredBuffer<float3> appendBuffer;
+AppendStructuredBuffer<float2> renderPosAppend;
 
 struct Triangle {
     int2 a, b, c;
     int2 ab() { return b - a; }
     int2 ac() { return c - a; }
     int2 bc() { return c - b; }
-    half area() { return abs(determinant(half2x2(ab().x, ab().y,ac().x, ac().y))) / 2; }
+    half area() { return abs(determinant(half2x2(ab().x, ab().y, ac().x, ac().y))) / 2.0; }
 };
 
 Triangle NewTriangle(int2 a, int2 b, int2 c) {
@@ -33,31 +31,35 @@ float PointInTriangle(int2 a, int2 b, int2 c, int2 p) {
     return step(spbc + spba + spac - sabc, 0);
 }
 
-[numthreads(NUM_THREADS_X, NUM_THREADS_Y,1)]
-void FrustumCulling (uint3 id : SV_DispatchThreadID)
+[numthreads(NUM_THREADS_X, NUM_THREADS_Y, 1)]
+void FrustumCulling(uint3 id : SV_DispatchThreadID)
 {
     //numthreads
     uint hasGrass = PointInTriangle(frustumPosIndex[0].xy, frustumPosIndex[0].zw,
         frustumPosIndex[1].xy, id.xy);
+    float2 terrainSize = float2(sizeBuffer[0], sizeBuffer[1]);
+    float2 threadSize = float2(sizeBuffer[2], sizeBuffer[3]);
+    float2 startPos = float2(sizeBuffer[4], sizeBuffer[5]);
+    int globIdFlattened = flattenId(startPos + id.xy, terrainSize);
 
-    int globIdFlattened = flattenId(id.xy, threadSize.xy)//globalId = 贴图内index+起始点index
-        + flattenId(_FrustumStartPosI.xy, terrainSize.xy);
     terrainDataBuffer[globIdFlattened].hasGrass = hasGrass;
-    //instanceCount += hasGrass;
     int count;
     //函数被封装，只能使用条件分支
-    if (hasGrass) {
+    /*if (hasGrass) {
         count = counter.IncrementCounter();
-        counter[0] = max(count, counter[0]);
         indirectDataBuffer[1] = max(indirectDataBuffer[1], count);
 
-        //renderPosAppend.Append(getTerrainPos(id.xy + _FrustumStartPosI.xy));
-        renderPosAppend.Append(float4(1,2,1,1));
-    }
-
-    testTexture[id.xy] = float4((id * _TileSize).xy, hasGrass,0);
+        //counter[0] = max(counter.IncrementCounter(), counter[0]);
+        //renderPosAppend.Append(float2(dat.height,dat.hasGrass));
+        renderPosAppend.Append(startPos + id.xy);
+        //renderPosAppend.Append(float2(globIdFlattened,0));
+        //startPos 0
+        //renderPosAppend.Append(threadSize);
+    }*/
+    renderPosAppend.Append(startPos + id.xy);
+    //indirectDataBuffer[0] = 0;
+    //testTexture[id.xy] = float4((id * _TileSize).xy, hasGrass, 0);
     //indirectDataBuffer[1] = indirectDataBuffer[1]+ hasGrass;
     //testTexture[id.xy] = float4(1,1,1,0.5);
-    appendBuffer.Append(float3(0,0,0));
 }
 

@@ -11,19 +11,14 @@ public class FrustumCalculation {
     private int frustumKernel = 0;
     //public GameObject plane;//for test
     private RenderTexture frustumTexture;//有用但不必放在这里，是为了测试
-    ComputeBuffer renderPosAppendBuffer;//同上
-    ComputeBuffer counterBuffer;
 
     //private Bounds boundMin;//test
 
 
     /// <summary>
-    /// 更新CS的RT(frustumTexture),
-    /// grassMaterial的_FrustumStartPosI和instanceBound
+    /// 返回threadSize(tex大小)+起始位置（index）
     /// </summary>
-    /// <param name="camera"></param>
-    public Bounds Run(Camera camera) {
-        counterBuffer.SetCounterValue(0);
+    public Bounds PrepareCamData(Camera camera, out Vector4 threadSize) {
         Vector3[] frustum = new Vector3[3];
         //想传6个整数，但unity的computeShader.SetInts和SetFloats有问题
         Vector4[] frusIndex = { Vector4.zero, Vector4.zero };
@@ -77,54 +72,27 @@ public class FrustumCalculation {
         }
         //Debug.Log(frusIndex[0].ToString() + "   " + frusIndex[1].ToString());
         calcShader.SetVectorArray(Shader.PropertyToID("frustumPosIndex"), frusIndex);
-        Shader.SetGlobalVector(Shader.PropertyToID("threadSize"),
-            new Vector4(texSize.x, texSize.y));
-        var f = tBuilder.GetTileIndex(camBound.min);
-        Shader.SetGlobalVector(Shader.PropertyToID("_FrustumStartPosI"),
-            new Vector4(f.x, f.y));
-        //boundMin = camBound;//test
+        var f = tBuilder.GetConstrainedTileIndex(camBound.min);
 
-        calcShader.Dispatch(frustumKernel, texSize.x / threadGroupSize.x,
-            texSize.y / threadGroupSize.y, 1);
+        threadSize = new Vector4(texSize.x, texSize.y,f.x,f.y);
         return camBound;
     }
 
+    public void RunComputeShader() {
+        calcShader.Dispatch(frustumKernel, texSize.x / threadGroupSize.x,
+            texSize.y / threadGroupSize.y, 1);
+    }
 
     public FrustumCalculation(ComputeShader shader, TerrainBuilder t) {
         tBuilder = t; calcShader = shader;
         //setup
         frustumKernel = calcShader.FindKernel("FrustumCulling");
-        renderPosAppendBuffer = new ComputeBuffer(1, sizeof(float) * 4, ComputeBufferType.Append);
-        renderPosAppendBuffer.SetCounterValue(0);
-        counterBuffer = new ComputeBuffer(1, sizeof(int), ComputeBufferType.Counter);
-        counterBuffer.SetCounterValue(0);
-        calcShader.SetBuffer(frustumKernel, "renderPosAppend", renderPosAppendBuffer);
-        calcShader.SetBuffer(frustumKernel, "counter", counterBuffer);
+        
         //test
         //plane.GetComponent<Renderer>().sharedMaterial.mainTexture = frustumTexture;
     }
-
-    public void forDebug() {
-        //test
-        int[] argNum = { 0 };
-        counterBuffer.GetData(argNum);
-        Vector4[] poses = new Vector4[argNum[0]];
-        renderPosAppendBuffer.GetData(poses);
-        string str = "";
-        for (int i = 0; i < Mathf.Min(20, argNum[0]); i++) {
-            str += (poses[i] + "  ");
-        }
-        Debug.Log(str);
-        //test plane
-        /*int patchSize = TerrainBuilder.PATCH_SIZE;
-        plane.transform.localScale =
-            new Vector3(patchSize * texSize.x,
-            patchSize * texSize.y, 1);
-        plane.transform.position = boundMin.min +
-            new Vector3(patchSize * texSize.x / 2,
-            0, patchSize * texSize.y / 2);*/
-
+    
+    public void SetBuffer(string name, ComputeBuffer buffer) {
+        calcShader.SetBuffer(frustumKernel, name, buffer);
     }
-
-
 }

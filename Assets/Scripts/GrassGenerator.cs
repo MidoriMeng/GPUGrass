@@ -4,8 +4,9 @@ public class GrassGenerator {
     private Texture2D grassDensityMap;
     private int grassAmountPerTile = 64;//实际渲染时每个Tile内最多的草叶数量
     private int pregenerateGrassAmount = 1023;//预生成Patch草体总长度
-    private Material grassMaterial;
+    public Material grassMaterial;
     private float patchSize;
+    private ComputeBuffer grassBuffer;
 
     private int bladeSectionCount = 5;//草叶分段，5段12顶点，6段14顶点
 
@@ -35,7 +36,7 @@ public class GrassGenerator {
                 new Vector4(root.x, root.y, root.z, (float)random.NextDouble()));
             grassData[i] = data;
         }
-        ComputeBuffer grassBuffer = new ComputeBuffer(pregenerateGrassAmount, sizeof(float) * 6);
+        grassBuffer = new ComputeBuffer(pregenerateGrassAmount, sizeof(float) * 6);
         grassBuffer.SetData(grassData);
         //send to gpu
         grassMaterial.SetInt("_SectionCount", bladeSectionCount);
@@ -91,6 +92,9 @@ public class GrassGenerator {
         this.patchSize = patchSize;
     }
 
+    public void ReleaseBufer() {
+        grassBuffer.Release();
+    }
     ///show grass
         /*GameObject grass = new GameObject("grass", typeof(MeshRenderer), typeof(MeshFilter));
         grass.transform.parent = transform;
