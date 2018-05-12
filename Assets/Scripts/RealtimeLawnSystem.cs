@@ -31,7 +31,7 @@ public class RealtimeLawnSystem : MonoBehaviour {
     private Bounds instanceBound;
 
     //test
-    Vector2[] poses;
+    Vector3[] poses;
 
     void Awake() {
         sizeBuffer = new ComputeBuffer(6, sizeof(float));
@@ -86,7 +86,7 @@ public class RealtimeLawnSystem : MonoBehaviour {
         if (renderPosAppendBuffer != null)
             renderPosAppendBuffer.Release();
         renderPosAppendBuffer = new ComputeBuffer(/*maxTileRenderCount*/16384,
-            sizeof(float) * 2, ComputeBufferType.Append);
+            sizeof(float) * 3, ComputeBufferType.Append);
         renderPosAppendBuffer.SetCounterValue(0);
         frustumCalc.SetBuffer("renderPosAppend", renderPosAppendBuffer);
 
@@ -107,13 +107,13 @@ public class RealtimeLawnSystem : MonoBehaviour {
         //test
         /*uint[] argNum = { 0, 0, 0, 0, 0 };
         argsBuffer.GetData(argNum);
-        Debug.Log(argNum[0]+"  "+argNum[1]  );
         //poses = new Vector2[argNum[1]];*/
         uint[] counter = { 0 };
         counterBuffer.GetData(counter);
-        //Debug.Log(argNum[0]+"  "+argNum[1]  );
-        poses = new Vector2[(int)(frustumSize.x* frustumSize.y)];
+        //poses = new Vector3[(int)(frustumSize.x * frustumSize.y)];
+        poses = new Vector3[counter[0]];
         renderPosAppendBuffer.GetData(poses);
+        //Debug.Log(counter[0]);
         /*string str = "";
         for (int i = 0; i < poses.Length; i++) {
             str += (poses[i] + "  ");
@@ -128,7 +128,8 @@ public class RealtimeLawnSystem : MonoBehaviour {
         Gizmos.color = Color.green;
         Gizmos.DrawWireCube(instanceBound.center, instanceBound.size);
         for(int i = 0; i < poses.Length; i++) {
-            Gizmos.DrawCube(new Vector3(poses[i].x, 50, poses[i].y)*2, Vector3.one);
+            Gizmos.color = poses[i].y==1?Color.green:Color.black;
+            Gizmos.DrawCube(new Vector3(poses[i].x, 50, poses[i].z)*2, Vector3.one);
         }
     }
 

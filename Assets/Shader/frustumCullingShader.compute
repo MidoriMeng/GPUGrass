@@ -7,7 +7,7 @@
 
 float4 frustumPosIndex[2];//[0].xy, [0].zw, [1].xy
 RWStructuredBuffer<uint> counter;//计数器
-AppendStructuredBuffer<float2> renderPosAppend;
+AppendStructuredBuffer<float3> renderPosAppend;
 
 struct Triangle {
     int2 a, b, c;
@@ -34,30 +34,33 @@ float PointInTriangle(int2 a, int2 b, int2 c, int2 p) {
 [numthreads(NUM_THREADS_X, NUM_THREADS_Y, 1)]
 void FrustumCulling(uint3 id : SV_DispatchThreadID)
 {
-    //numthreads
-    uint hasGrass = PointInTriangle(frustumPosIndex[0].xy, frustumPosIndex[0].zw,
-        frustumPosIndex[1].xy, id.xy);
     float2 terrainSize = float2(sizeBuffer[0], sizeBuffer[1]);
     float2 threadSize = float2(sizeBuffer[2], sizeBuffer[3]);
     float2 startPos = float2(sizeBuffer[4], sizeBuffer[5]);
     float2 startPos_c = GetConstrainedTileIndex(startPos);
-    int globIdFlattened = flattenId(startPos + id.xy, terrainSize);
+    float2 globIndex = startPos_c + id.xy;
+    int globIdFlattened = flattenId(globIndex, terrainSize);
 
-    terrainDataBuffer[globIdFlattened].hasGrass = hasGrass;
     int count;
+
+    uint hasGrass = PointInTriangle(frustumPosIndex[0].xy, frustumPosIndex[0].zw,
+        frustumPosIndex[1].xy, globIndex);
+    terrainDataBuffer[globIdFlattened].hasGrass = hasGrass;
+
+    float3 f = float3(globIndex.x, hasGrass, globIndex.y);
     //函数被封装，只能使用条件分支
-    /*if (hasGrass) {
-        count = counter.IncrementCounter();
-        indirectDataBuffer[1] = max(indirectDataBuffer[1], count);
+    if (hasGrass) {
+        counter[0] = counter.IncrementCounter();
+        indirectDataBuffer[1] = max(indirectDataBuffer[1], counter[0]);
 
         //counter[0] = max(counter.IncrementCounter(), counter[0]);
         //renderPosAppend.Append(float2(dat.height,dat.hasGrass));
-        renderPosAppend.Append(startPos + id.xy);
+        renderPosAppend.Append(f);
         //renderPosAppend.Append(float2(globIdFlattened,0));
         //startPos 0
         //renderPosAppend.Append(threadSize);
-    }*/
-    renderPosAppend.Append(startPos_c + id.xy);
+    }
+
     //indirectDataBuffer[0] = 0;
     //testTexture[id.xy] = float4((id * _TileSize).xy, hasGrass, 0);
     //indirectDataBuffer[1] = indirectDataBuffer[1]+ hasGrass;

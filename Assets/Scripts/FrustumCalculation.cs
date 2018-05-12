@@ -66,7 +66,7 @@ public class FrustumCalculation {
 
         for (int i = 0; i < 3; i++) {
             Vector2Int t = tBuilder.GetTileIndex(frustum[i]);
-            t -= tBuilder.GetTileIndex(camBound.min);
+            //t -= tBuilder.GetTileIndex(camBound.min);
             frusIndex[i / 2] += new Vector4(t.x * Mathf.Abs(i - 1), t.y * Mathf.Abs(i - 1),
                 t.x * (i % 2), t.y * (i % 2));
         }
