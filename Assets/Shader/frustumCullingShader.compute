@@ -40,6 +40,7 @@ void FrustumCulling(uint3 id : SV_DispatchThreadID)
     float2 terrainSize = float2(sizeBuffer[0], sizeBuffer[1]);
     float2 threadSize = float2(sizeBuffer[2], sizeBuffer[3]);
     float2 startPos = float2(sizeBuffer[4], sizeBuffer[5]);
+    float2 startPos_c = GetConstrainedTileIndex(startPos);
     int globIdFlattened = flattenId(startPos + id.xy, terrainSize);
 
     terrainDataBuffer[globIdFlattened].hasGrass = hasGrass;
@@ -56,7 +57,7 @@ void FrustumCulling(uint3 id : SV_DispatchThreadID)
         //startPos 0
         //renderPosAppend.Append(threadSize);
     }*/
-    renderPosAppend.Append(startPos + id.xy);
+    renderPosAppend.Append(startPos_c + id.xy);
     //indirectDataBuffer[0] = 0;
     //testTexture[id.xy] = float4((id * _TileSize).xy, hasGrass, 0);
     //indirectDataBuffer[1] = indirectDataBuffer[1]+ hasGrass;

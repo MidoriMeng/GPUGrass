@@ -80,8 +80,8 @@ public class TerrainBuilder {
 
 
     public Vector2Int GetConstrainedTileIndex(int indexX, int indexZ) {
-        indexX = Mathf.Max(0, indexX); indexX = Mathf.Min(indexX, heightMap.width / PATCH_SIZE - 2);
-        indexZ = Mathf.Max(0, indexZ); indexZ = Mathf.Min(indexZ, heightMap.height / PATCH_SIZE - 2);
+        indexX = Mathf.Clamp(indexX, 0, heightMap.width / PATCH_SIZE - 2);
+        indexZ = Mathf.Clamp(indexZ, 0, heightMap.height / PATCH_SIZE - 2);
         return new Vector2Int(indexX, indexZ);
     }
     public Vector2Int GetConstrainedTileIndex(Vector2Int index) {

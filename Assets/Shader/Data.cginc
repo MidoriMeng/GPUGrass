@@ -34,3 +34,10 @@ float4 getTerrainPos(int2 id) {
 int2 getPosIndex(float2 pos) {
     return pos / _TileSize;
 }
+
+int2 GetConstrainedTileIndex(int2 index) {
+    int2 res;
+    res.x = clamp(index.x, 0, sizeBuffer[2]-2);
+    res.y = clamp(index.y, 0, sizeBuffer[3]-2);
+    return res;
+}

@@ -16,7 +16,7 @@ public class FrustumCalculation {
 
 
     /// <summary>
-    /// 返回threadSize(tex大小)+起始位置（index）
+    /// 返回threadSize(tex大小)+起始位置（index,not constrained）
     /// </summary>
     public Bounds PrepareCamData(Camera camera, out Vector4 threadSize) {
         Vector3[] frustum = new Vector3[3];
@@ -72,7 +72,7 @@ public class FrustumCalculation {
         }
         //Debug.Log(frusIndex[0].ToString() + "   " + frusIndex[1].ToString());
         calcShader.SetVectorArray(Shader.PropertyToID("frustumPosIndex"), frusIndex);
-        var f = tBuilder.GetConstrainedTileIndex(camBound.min);
+        var f = tBuilder.GetTileIndex(camBound.min);
 
         threadSize = new Vector4(texSize.x, texSize.y,f.x,f.y);
         return camBound;
