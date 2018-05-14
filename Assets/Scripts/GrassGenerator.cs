@@ -42,6 +42,10 @@ public class GrassGenerator {
         grassMaterial.SetInt("_SectionCount", bladeSectionCount);
         Shader.SetGlobalFloat("_TileSize", patchSize);
         grassMaterial.SetBuffer("_patchData", grassBuffer);
+
+        //test
+        Shader.SetGlobalInt("_SectionCount", bladeSectionCount);
+        Shader.SetGlobalBuffer("_patchData", grassBuffer);
     }
 
 

@@ -24,7 +24,7 @@ public class RealtimeLawnSystem : MonoBehaviour {
     private GrassGenerator grassGen;
     private TerrainBuilder terrainBuilder;
     private FrustumCalculation frustumCalc;
-    private Mesh grassMesh;
+    public Mesh grassMesh;//for test应该改为private
 
     //indirect
     private ComputeBuffer argsBuffer;
@@ -32,6 +32,7 @@ public class RealtimeLawnSystem : MonoBehaviour {
 
     //test
     Vector3[] poses;
+    public Material testMat;
 
     void Awake() {
         sizeBuffer = new ComputeBuffer(6, sizeof(float));
@@ -54,7 +55,14 @@ public class RealtimeLawnSystem : MonoBehaviour {
         var terrainBuffer = terrainBuilder.BuildTerrainDataBuffer();
         frustumCalc.SetBuffer("terrainDataBuffer", terrainBuffer);
         Shader.SetGlobalBuffer("terrainDataBuffer", terrainBuffer);
+        grassMaterial.SetInt("grassAmountPerTile", grassAmountPerTile);
+        grassMaterial.SetInt("pregenerateGrassAmount", pregenerateGrassAmount);
 
+        testMat.SetInt("grassAmountPerTile", grassAmountPerTile);
+        testMat.SetInt("pregenerateGrassAmount", pregenerateGrassAmount);
+
+        //test
+        testMat.SetBuffer("renderPosAppend", renderPosAppendBuffer);
     }
 
     void Update() {
@@ -77,7 +85,7 @@ public class RealtimeLawnSystem : MonoBehaviour {
             argsBuffer.Release();
         uint meshIndicesNum = (uint)grassMesh.vertices.Length;
         uint[] args = new uint[5] { meshIndicesNum, 0, 0, 0, 0 };
-        argsBuffer = new ComputeBuffer(5, sizeof(uint),
+        argsBuffer = new ComputeBuffer(1, sizeof(uint)*5,
             ComputeBufferType.IndirectArguments);
         argsBuffer.SetData(args);
         frustumCalc.SetBuffer("indirectDataBuffer", argsBuffer);
@@ -89,6 +97,7 @@ public class RealtimeLawnSystem : MonoBehaviour {
             sizeof(float) * 3, ComputeBufferType.Append);
         renderPosAppendBuffer.SetCounterValue(0);
         frustumCalc.SetBuffer("renderPosAppend", renderPosAppendBuffer);
+        Shader.SetGlobalBuffer("renderPosAppend", renderPosAppendBuffer);
 
         //更新counter
         if (counterBuffer != null)
@@ -101,8 +110,8 @@ public class RealtimeLawnSystem : MonoBehaviour {
 
         frustumCalc.RunComputeShader();
         //render grass,TODO: LOD 64 32 16
-        Graphics.DrawMeshInstancedIndirect(grassMesh,
-            0, grassGen.grassMaterial, instanceBound, argsBuffer);
+        /*Graphics.DrawMeshInstancedIndirect(grassMesh,
+            0, grassGen.grassMaterial, instanceBound, argsBuffer);*/
 
         //test
         /*uint[] argNum = { 0, 0, 0, 0, 0 };
@@ -112,12 +121,13 @@ public class RealtimeLawnSystem : MonoBehaviour {
         counterBuffer.GetData(counter);
         //poses = new Vector3[(int)(frustumSize.x * frustumSize.y)];
         poses = new Vector3[counter[0]];
-        renderPosAppendBuffer.GetData(poses);
+        //renderPosAppendBuffer.GetData(poses);
         //Debug.Log(counter[0]);
         /*string str = "";
         for (int i = 0; i < poses.Length; i++) {
             str += (poses[i] + "  ");
-        }*/
+        }
+        Debug.Log(str);*/
 
         /*uint x, y, z;//test
         frustumCalcShader.GetKernelThreadGroupSizes(frustumKernel,out x, out y, out z);//8,8,1
@@ -127,10 +137,10 @@ public class RealtimeLawnSystem : MonoBehaviour {
     private void OnDrawGizmos() {
         Gizmos.color = Color.green;
         Gizmos.DrawWireCube(instanceBound.center, instanceBound.size);
-        for(int i = 0; i < poses.Length; i++) {
+        /*for(int i = 0; i < poses.Length; i++) {
             Gizmos.color = poses[i].y==1?Color.green:Color.black;
             Gizmos.DrawCube(new Vector3(poses[i].x, 50, poses[i].z)*2, Vector3.one);
-        }
+        }*/
     }
 
     public void BuildTerrainTool() {

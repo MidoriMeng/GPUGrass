@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
-
+/*
 [CustomEditor(typeof(RealtimeLawnSystem))]
 public class RealtimeLawnSystemEditor : Editor {
     public override void OnInspectorGUI() {
@@ -14,3 +14,4 @@ public class RealtimeLawnSystemEditor : Editor {
         }
     }
 }
+*/
