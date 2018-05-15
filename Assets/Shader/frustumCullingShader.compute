@@ -45,7 +45,7 @@ void FrustumCulling(uint3 id : SV_DispatchThreadID)
 
     uint hasGrass = PointInTriangle(frustumPosIndex[0].xy, frustumPosIndex[0].zw,
         frustumPosIndex[1].xy, globIndex);
-    terrainDataBuffer[globIdFlattened].hasGrass = hasGrass;
+    //.hasGrass = hasGrass;
 
     float3 f = float3(globIndex.x, hasGrass, globIndex.y);
     //函数被封装，只能使用条件分支

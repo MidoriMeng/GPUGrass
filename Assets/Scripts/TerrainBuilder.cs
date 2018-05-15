@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class TerrainBuilder {
     private Texture2D heightMap;
-    private float terrainHeight = 5f;
+    public float terrainHeight = 5f;
     public const int PATCH_SIZE = 2;//Patch的边长
     private Material terrainMat;
     private ComputeBuffer terrainDataBuffer;
@@ -70,12 +70,20 @@ public class TerrainBuilder {
         TerrainData[] data = new TerrainData[bufLen];
         for (int i = 0; i < heightMap.height; i++) {
             for (int j = 0; j < heightMap.width; j++) {
+                float height = heightMap.GetPixel(j, i).grayscale * terrainHeight;
                 data[i * heightMap.width + j] =
-                    new TerrainData(heightMap.GetPixel(j, i).grayscale * terrainHeight);
+                    new TerrainData(height);
             }
         }
         terrainDataBuffer.SetData(data);
         return terrainDataBuffer;
+    }
+
+    public Texture BuildTerrainDataTexture() {
+        /*RenderTexture res = new RenderTexture(
+            heightMap.width, heightMap.height, 24);
+        Graphics.Blit(heightMap, res);*/
+        return heightMap;
     }
 
 
@@ -97,7 +105,7 @@ public class TerrainBuilder {
     /// </summary>
     public Vector3 GetTilePosition(int i, int j) {
         Vector2Int index = GetConstrainedTileIndex(i, j);
-        float height= heightMap.GetPixel(index.x, index.y).grayscale * terrainHeight;
+        float height= heightMap.GetPixel(index.x, index.y).r * terrainHeight;
         return new Vector3(index.x * terrainScale, height, index.y * terrainScale);
         //return vertices[index.x * GrassGenerator.PATCH_SIZE * heightMap.width + index.y * GrassGenerator.PATCH_SIZE];
     }
@@ -111,9 +119,10 @@ public class TerrainBuilder {
             Mathf.FloorToInt(position.z / PATCH_SIZE));
     }
 
-    public void ReleaseBuffer() {
+    /*public void ReleaseBuffer() {
         terrainDataBuffer.Release();
-    }
+    }*/
+
     struct TerrainData {
         float height;
         float hasGrass;//整数是否显示草，小数草密度
@@ -122,7 +131,7 @@ public class TerrainBuilder {
         public TerrainData(float height) {
             this.height = height;
             hasGrass = 0;
-            grassDensity = 0;
+            grassDensity = 0.5f;
         }
         public int size() { return sizeof(float) * 3; }
     };

@@ -107,7 +107,6 @@
                     UNITY_INITIALIZE_OUTPUT(v2f, o);
 
                     float3 index = renderPosAppend[v.instanceID];
-                    //float3 index = float3(2, 1, 6);
                     float4 worldPos = getTerrainPos(index.xz);
                     //setup(pos);//transform matrix
                     float4 hdi = setupHDI(index);//material property→手动

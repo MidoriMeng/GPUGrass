@@ -8,7 +8,9 @@ struct TerrainData {
     //wind
 };
 
-RWStructuredBuffer<TerrainData> terrainDataBuffer;
+//RWStructuredBuffer<TerrainData> terrainDataBuffer;
+Texture2D<float> terrainHeightTex;
+float terrainHeight;
 //float4 _FrustumStartPosI;//每帧更新，视锥体块的起点
 RWStructuredBuffer<uint> indirectDataBuffer;
 StructuredBuffer<float> sizeBuffer;//场景大小/视锥体贴图大小/视锥体块的起点
@@ -25,10 +27,12 @@ int2 getTileIndex(int flatid, int2 mapSize) {
 }
 
 float4 getTerrainPos(int2 id) {
-    float2 terrainSize = { sizeBuffer[0],sizeBuffer[1] };
+    return float4(id.x*_TileSize,
+        terrainHeightTex[id*_TileSize] * terrainHeight, id.y*_TileSize, 0);
+    /*float2 terrainSize = { sizeBuffer[0],sizeBuffer[1] };
     int flatid = flattenId(id, terrainSize);
     return float4(id.x*_TileSize, terrainDataBuffer[flatid].height, id.y*_TileSize, 0);
-    
+    */
 }
 
 int2 getPosIndex(float2 pos) {

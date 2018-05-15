@@ -68,6 +68,8 @@
 
             v2f vert (appdata v, uint instanceID : SV_InstanceID)
             {
+                v2f o;
+                UNITY_INITIALIZE_OUTPUT(v2f, o);
             #if SHADER_TARGET >= 45
                 float3 index = renderPosAppend[instanceID];
             #else
@@ -79,7 +81,6 @@
                 float3 worldNormal = v.normal;
 
 
-                v2f o;
                 o.pos = mul(UNITY_MATRIX_VP, float4(worldPosition, 1.0f));
                 return o;
             }

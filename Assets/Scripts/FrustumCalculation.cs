@@ -95,4 +95,12 @@ public class FrustumCalculation {
     public void SetBuffer(string name, ComputeBuffer buffer) {
         calcShader.SetBuffer(frustumKernel, name, buffer);
     }
+
+    public void SetFloat(string name, float value) {
+        calcShader.SetFloat(name, value);
+    }
+
+    public void SetTextureFromGlobal(string name) {
+        calcShader.SetTextureFromGlobal(frustumKernel, name, name);
+    }
 }

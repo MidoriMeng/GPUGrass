@@ -65,6 +65,23 @@
             int pregenerateGrassAmount;
             int grassAmountPerTile;
 
+
+            float rand(float3 co)
+            {
+                return frac(sin(dot(co.xyz, float3(12.9898, 78.233, 45.5432))) * 43758.5453);
+            }
+
+            float4 setupHDI(float3 index) {
+                float4 hdi;
+                hdi.x = getTerrainPos(float2(index.x + 1, index.z));
+                hdi.y = getTerrainPos(float2(index.x + 1, index.z + 1));
+                hdi.z = getTerrainPos(float2(index.x, index.z + 1));
+                float random = rand(index);
+                hdi.w = (int)(random * (pregenerateGrassAmount - grassAmountPerTile));
+                return hdi;
+            }
+
+
             v2f vert (appdata v, uint instanceID : SV_InstanceID)
             {
                 v2f o;
@@ -74,14 +91,16 @@
             #else
                 float3 index = 0;
             #endif
+                //float4 hdi = setupHDI(index);
 
-                float4 worldPos = getTerrainPos(index.xz);
+                float4 worldStartPos = getTerrainPos(index.xz);//按理说应该有y
                 float3 localPosition = v.vertex.xyz;
-                float3 worldPosition = index*2 + localPosition;
+                float3 worldPosition = worldStartPos + localPosition;
                 float3 worldNormal = v.normal;
 
 
                 o.pos = mul(UNITY_MATRIX_VP, float4(worldPosition, 1.0f));
+                o.test = terrainHeightTex[index.xz];
                 return o;
             }
 
@@ -89,6 +108,7 @@
 
             fixed4 frag (v2f i) : SV_Target
             {
+                return float4(i.test,1);
                 fixed4 color = tex2D(_MainTex, i.uv);
                 fixed4 alpha = tex2D(_AlphaTex, i.uv);
                 half3 worldNormal = UnityObjectToWorldNormal(i.normal);

@@ -44,17 +44,24 @@ public class RealtimeLawnSystem : MonoBehaviour {
         GameObject terrain = GameObject.Find("terrain");
         if (!terrain)
             terrainBuilder.BuildTerrain(transform);
+        //视锥体
+        frustumCalc = new FrustumCalculation(calcShader, terrainBuilder);        
         //草叶
         grassGen = new GrassGenerator(grassDensityMap, grassAmountPerTile,
             pregenerateGrassAmount, grassMaterial, TerrainBuilder.PATCH_SIZE);
         grassMesh = grassGen.generateGrassTile();
         grassGen.PregenerateGrassInfo();
-        //视锥体
-        frustumCalc = new FrustumCalculation(calcShader, terrainBuilder);
+
         //terrain data buffer
-        var terrainBuffer = terrainBuilder.BuildTerrainDataBuffer();
-        frustumCalc.SetBuffer("terrainDataBuffer", terrainBuffer);
-        Shader.SetGlobalBuffer("terrainDataBuffer", terrainBuffer);
+        Texture terrainTex = terrainBuilder.BuildTerrainDataTexture();
+        Shader.SetGlobalTexture("terrainHeightTex", terrainTex);
+        frustumCalc.SetTextureFromGlobal("terrainHeightTex");
+        //frustumCalc.SetBuffer("terrainDataBuffer", terrainBuffer);
+        //testMat.SetBuffer("terrainDataBuffer", terrainBuffer);
+
+        Shader.SetGlobalFloat("terrainHeight", terrainHeight);
+        frustumCalc.SetFloat("terrainHeight", terrainHeight);
+
         grassMaterial.SetInt("grassAmountPerTile", grassAmountPerTile);
         grassMaterial.SetInt("pregenerateGrassAmount", pregenerateGrassAmount);
 
@@ -62,7 +69,7 @@ public class RealtimeLawnSystem : MonoBehaviour {
         testMat.SetInt("pregenerateGrassAmount", pregenerateGrassAmount);
 
         //test
-        testMat.SetBuffer("renderPosAppend", renderPosAppendBuffer);
+        //testMat.SetBuffer("renderPosAppend", renderPosAppendBuffer);
     }
 
     void Update() {
@@ -117,13 +124,13 @@ public class RealtimeLawnSystem : MonoBehaviour {
         /*uint[] argNum = { 0, 0, 0, 0, 0 };
         argsBuffer.GetData(argNum);
         //poses = new Vector2[argNum[1]];*/
-        uint[] counter = { 0 };
+        /*uint[] counter = { 0 };
         counterBuffer.GetData(counter);
         //poses = new Vector3[(int)(frustumSize.x * frustumSize.y)];
         poses = new Vector3[counter[0]];
-        //renderPosAppendBuffer.GetData(poses);
+        renderPosAppendBuffer.GetData(poses);
         //Debug.Log(counter[0]);
-        /*string str = "";
+        string str = "";
         for (int i = 0; i < poses.Length; i++) {
             str += (poses[i] + "  ");
         }
@@ -153,7 +160,7 @@ public class RealtimeLawnSystem : MonoBehaviour {
 
     private void OnDisable() {
         grassGen.ReleaseBufer();
-        terrainBuilder.ReleaseBuffer();
+        //terrainBuilder.ReleaseBuffer();
         argsBuffer.Release();
         sizeBuffer.Release();
         renderPosAppendBuffer.Release();
