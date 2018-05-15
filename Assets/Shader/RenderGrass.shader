@@ -73,9 +73,10 @@
 
             float3 setupHDI(float3 index, out int patchIndex) {
                 float3 hdi;
-                hdi.x = getTerrainPos(float2(index.x + 1, index.z));
-                hdi.y = getTerrainPos(float2(index.x + 1, index.z + 1));
-                hdi.z = getTerrainPos(float2(index.x, index.z + 1));
+                float height = getTerrainPos(index.xz);
+                hdi.x = getTerrainPos(float2(index.x + 1, index.z)) - height;
+                hdi.y = getTerrainPos(float2(index.x + 1, index.z + 1)) - height;
+                hdi.z = getTerrainPos(float2(index.x, index.z + 1)) - height;
                 float random = rand(index);
                 patchIndex = (int)(random * (pregenerateGrassAmount - grassAmountPerTile));
                 return hdi;
@@ -159,7 +160,7 @@
                 //test
                 float3 localPosition = 0;
                 //localPosition += float3(bladeIndex, 0, bladeIndex / 63);//local root pos
-                localPosition += float3(vertIndex % 2/5.0, vertIndex / 2/10.0, 0);
+                localPosition += float3(vertIndex % 2/10.0, vertIndex / 2/5.0, 0);
                 
                 localPosition += getLocalRootPos(index, v.vertex.xyz, patchIndex);
 
@@ -171,7 +172,6 @@
 
 
                 o.pos = mul(UNITY_MATRIX_VP, float4(worldPosition, 1.0f));
-                o.test = instanceID/255.0;
                 return o;
             }
 
@@ -179,7 +179,7 @@
 
             fixed4 frag (v2f i) : SV_Target
             {
-                return float4(i.test,1);
+                //return float4(i.test,1);
                 fixed4 color = tex2D(_MainTex, i.uv);
                 fixed4 alpha = tex2D(_AlphaTex, i.uv);
                 half3 worldNormal = UnityObjectToWorldNormal(i.normal);

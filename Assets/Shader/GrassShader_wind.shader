@@ -94,9 +94,10 @@
 
                 float4 setupHDI(float3 index) {
                     float4 hdi;
-                    hdi.x = getTerrainPos(float2(index.x + 1, index.z));
-                    hdi.y = getTerrainPos(float2(index.x + 1, index.z + 1));
-                    hdi.z = getTerrainPos(float2(index.x, index.z + 1));
+                    float height= getTerrainPos(index.xz);
+                    hdi.x = getTerrainPos(float2(index.x + 1, index.z))- height;
+                    hdi.y = getTerrainPos(float2(index.x + 1, index.z + 1)) - height;
+                    hdi.z = getTerrainPos(float2(index.x, index.z + 1)) - height;
                     float random = rand(index);
                     hdi.w = (int)(random * (pregenerateGrassAmount - grassAmountPerTile));
                     return hdi;
