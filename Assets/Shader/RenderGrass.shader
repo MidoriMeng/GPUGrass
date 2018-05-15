@@ -151,16 +151,27 @@
                 float3 index = 0;
             #endif
                 //float4 hdi = setupHDI(index);
-                uint patchIndex;
-                float4 worldStartPos = getTerrainPos(index.xz);//按理说应该有y
-                float3 localPosition = getLocalRootPos(index, v.vertex.xyz, patchIndex);
-                localPosition += getBladeOffset(index, v.vertex.xyz, v.uv.y, patchIndex);
+                uint bladeIndex = v.vertex.x;//0~63
+                uint vertIndex = v.vertex.y;//0~11
+                GrassData patchInfo = _patchData[bladeIndex];
+                uint patchIndex; setupHDI(index, patchIndex);
+
+                //test
+                float3 localPosition = 0;
+                //localPosition += float3(bladeIndex, 0, bladeIndex / 63);//local root pos
+                localPosition += float3(vertIndex % 2/5.0, vertIndex / 2/10.0, 0);
+                
+                localPosition += getLocalRootPos(index, v.vertex.xyz, patchIndex);
+
+                float4 worldStartPos = getTerrainPos(index.xz);
+                //localPosition += getLocalRootPos(index, v.vertex.xyz, patchIndex);
+                //localPosition += getBladeOffset(index, v.vertex.xyz, v.uv.y, patchIndex);
                 float3 worldPosition = worldStartPos + localPosition;
                 float3 worldNormal = v.normal;
 
 
                 o.pos = mul(UNITY_MATRIX_VP, float4(worldPosition, 1.0f));
-                o.test = terrainHeightTex[index.xz];
+                o.test = instanceID/255.0;
                 return o;
             }
 
