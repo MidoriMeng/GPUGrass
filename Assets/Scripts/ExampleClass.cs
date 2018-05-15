@@ -13,7 +13,7 @@ public class ExampleClass : MonoBehaviour {
     private uint[] args = new uint[5] { 0, 0, 0, 0, 0 };
 
     void Start() {
-        //grassMesh = lawn.grassMesh;
+        grassMesh = lawn.grassMesh;
         argsBuffer = new ComputeBuffer(1, args.Length * sizeof(uint), ComputeBufferType.IndirectArguments);
         UpdateBuffers();
     }

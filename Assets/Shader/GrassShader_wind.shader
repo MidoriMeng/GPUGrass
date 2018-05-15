@@ -134,6 +134,7 @@
                         deltaY = -((hdi.z - hdi.y)*(rootLPos.x - _TileSize) + (hdi.x - hdi.y) * (rootLPos.z - _TileSize))
                             / _TileSize + hdi.y;
                     }
+                    ////////////////////////////////////
                     //形成草叶形状
                                                  //return 1 or -1          //
                     float4 bladeOffset = float4((fmod(vertIndex, 2) * 2 - 1) * _Width, v.uv.y *height, 0, 0);
@@ -144,7 +145,6 @@
                     float bending = fmod(bladeIndex, 3)*0.5+0.2;
                     float a = -height / (bending * bending), b = 2 * height / bending;
                     float deltaZ = (-b + sqrt(b*b + 4 * a*(v.uv.y * height))) / (2 * a);
-                    o.test = deltaZ;
                     bladeOffset.z += deltaZ;
                     //blade swinging
 

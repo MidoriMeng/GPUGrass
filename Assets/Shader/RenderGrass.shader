@@ -71,16 +71,75 @@
                 return frac(sin(dot(co.xyz, float3(12.9898, 78.233, 45.5432))) * 43758.5453);
             }
 
-            float4 setupHDI(float3 index) {
-                float4 hdi;
+            float3 setupHDI(float3 index, out int patchIndex) {
+                float3 hdi;
                 hdi.x = getTerrainPos(float2(index.x + 1, index.z));
                 hdi.y = getTerrainPos(float2(index.x + 1, index.z + 1));
                 hdi.z = getTerrainPos(float2(index.x, index.z + 1));
                 float random = rand(index);
-                hdi.w = (int)(random * (pregenerateGrassAmount - grassAmountPerTile));
+                patchIndex = (int)(random * (pregenerateGrassAmount - grassAmountPerTile));
                 return hdi;
             }
 
+            //形成草叶形状
+            float3 getBladeOffset(float3 index, float3 vertex,
+                float uvv, uint patchIndex) {
+                //变量准备
+                uint bladeIndex = vertex.x + patchIndex;//0~63+0~1023-64
+                uint vertIndex = vertex.y;//0~11
+                GrassData patchInfo = _patchData[bladeIndex];
+                float density = patchInfo.density;
+                float4 rootLPos = patchInfo.rootDir.xyzz;
+
+                float dir = patchInfo.rootDir.w * 2 * PI,
+                    height = patchInfo.height * _Height;
+
+                //计算
+                //return 1 or -1          //
+                float4 bladeOffset = float4((fmod(vertIndex, 2) * 2 - 1) * _Width, uvv *height, 0, 0);
+
+                //风
+                float3 windVec = float3(1, 0, 0);
+                //blade bending
+                float bending = fmod(bladeIndex, 3)*0.5 + 0.2;
+                float a = -height / (bending * bending), b = 2 * height / bending;
+                float deltaZ = (-b + sqrt(b*b + 4 * a*(uvv * height))) / (2 * a);
+                bladeOffset.z += deltaZ;
+                //blade swinging
+
+                float sin, cos;
+                sincos(dir, /*out*/ sin, /*out*/ cos);
+                bladeOffset = float4(bladeOffset.x*cos + bladeOffset.z*sin,
+                    bladeOffset.y,
+                    -bladeOffset.x*sin + bladeOffset.z*cos, 0);
+                return bladeOffset;
+            }
+
+            float3 getLocalRootPos(float3 index, float3 vertex, out uint patchIndex) {
+                float3 hd = setupHDI(index, patchIndex);//height delta
+                //uint vertexCount = (_SectionCount + 1) * 2;//12
+                uint bladeIndex = vertex.x + patchIndex;//0~63+0~1023-64
+                GrassData patchInfo = _patchData[bladeIndex];
+                float4 rootLPos = patchInfo.rootDir.xyzz; 
+                rootLPos.w = 0;//local pos in tile
+
+                               //计算deltaY：本地Y增量（高低）
+                               //A(0,0,0)   C(_TileSize, hd.y, _TileSize) 
+                               //B(_TileSize, hd.x, 0)   D(0, hd.z, _TileSize)
+                float x3, y3, z3, deltaY;
+                if (rootLPos.z + rootLPos.x <= _TileSize) {//ABD
+                                                           //y=(yb*x+yd*z)/l
+                    deltaY = (hd.x * rootLPos.x + hd.z * rootLPos.z) / _TileSize;
+                }
+                else {//CBD
+                      //C(0, 0, 0)  B(0, hd.x - hd.y, -_TileSize)  D(-_TileSize, hd.z - hd.y, 0)
+                      //(rootLPos.x - _TileSize, ?, rootLPos.z - _TileSize)
+                      //y'=-(yd'*x'+yb'*z')/l
+                    deltaY = -((hd.z - hd.y)*(rootLPos.x - _TileSize) + (hd.x - hd.y) * (rootLPos.z - _TileSize))
+                        / _TileSize + hd.y;
+                }
+                return rootLPos + float3(0, deltaY, 0);
+            }
 
             v2f vert (appdata v, uint instanceID : SV_InstanceID)
             {
@@ -92,9 +151,10 @@
                 float3 index = 0;
             #endif
                 //float4 hdi = setupHDI(index);
-
+                uint patchIndex;
                 float4 worldStartPos = getTerrainPos(index.xz);//按理说应该有y
-                float3 localPosition = v.vertex.xyz;
+                float3 localPosition = getLocalRootPos(index, v.vertex.xyz, patchIndex);
+                localPosition += getBladeOffset(index, v.vertex.xyz, v.uv.y, patchIndex);
                 float3 worldPosition = worldStartPos + localPosition;
                 float3 worldNormal = v.normal;
 
