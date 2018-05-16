@@ -229,14 +229,14 @@ Transform:
     type: 2}
   m_PrefabInternal: {fileID: 0}
   m_GameObject: {fileID: 519213408}
-  m_LocalRotation: {x: -0.0278943, y: -0.4304192, z: 0.058346603, w: 0.9003094}
+  m_LocalRotation: {x: -0.013739617, y: -0.6257928, z: 0.06319526, w: 0.7773037}
   m_LocalPosition: {x: 21.9, y: 12, z: 90.1}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children:
   - {fileID: 2047868685}
   m_Father: {fileID: 0}
   m_RootOrder: 2
-  m_LocalEulerAnglesHint: {x: 0, y: -51.103, z: 7.4160004}
+  m_LocalEulerAnglesHint: {x: 3.3100002, y: -77.482, z: 6.6400003}
 --- !u!1 &910668210
 GameObject:
   m_ObjectHideFlags: 0
@@ -266,7 +266,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   lawn: {fileID: 1112668795}
   instanceCount: 800
-  grassMesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+  grassMesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 3}
   instanceMaterial: {fileID: 2100000, guid: 931c78bcbccf3cb44994f1e19c4de2c8, type: 2}
 --- !u!4 &910668212
 Transform:
@@ -316,7 +316,7 @@ MonoBehaviour:
   heightMap: {fileID: 2800000, guid: 45e64b3e874365949ae291ac5232e39c, type: 3}
   terrainHeight: 15
   terrainMat: {fileID: 2100000, guid: b50516405a76f954aaca83efa3b9dfd0, type: 2}
-  grassMesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+  grassMesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 3}
   testMat: {fileID: 2100000, guid: 931c78bcbccf3cb44994f1e19c4de2c8, type: 2}
 --- !u!4 &1112668796
 Transform:

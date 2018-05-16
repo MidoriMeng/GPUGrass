@@ -66,6 +66,13 @@
             int grassAmountPerTile;
 
 
+            void TerrainBilinear(float3 hd, inout float3 input) {
+                float t = _TileSize;
+                float yR1 = input.x / t * hd.x;
+                float yR2 = (t - input.x) / t * hd.z + input.x / t * hd.y;
+                input.y = (t - input.z) / t * yR1 + input.z / t * yR2;
+            }
+
             float rand(float3 co)
             {
                 return frac(sin(dot(co.xyz, float3(12.9898, 78.233, 45.5432))) * 43758.5453);
@@ -73,10 +80,10 @@
 
             float3 setupHDI(float3 index, out int patchIndex) {
                 float3 hdi;
-                float height = getTerrainPos(index.xz);
-                hdi.x = getTerrainPos(float2(index.x + 1, index.z)) - height;
-                hdi.y = getTerrainPos(float2(index.x + 1, index.z + 1)) - height;
-                hdi.z = getTerrainPos(float2(index.x, index.z + 1)) - height;
+                float height = getTerrainPos(index.xz).y;
+                hdi.x = getTerrainPos(float2(index.x + 1, index.z)).y - height;
+                hdi.y = getTerrainPos(float2(index.x + 1, index.z + 1)).y - height;
+                hdi.z = getTerrainPos(float2(index.x, index.z + 1)).y - height;
                 float random = rand(index);
                 patchIndex = (int)(random * (pregenerateGrassAmount - grassAmountPerTile));
                 return hdi;
@@ -127,19 +134,8 @@
                                //计算deltaY：本地Y增量（高低）
                                //A(0,0,0)   C(_TileSize, hd.y, _TileSize) 
                                //B(_TileSize, hd.x, 0)   D(0, hd.z, _TileSize)
-                float x3, y3, z3, deltaY;
-                if (rootLPos.z + rootLPos.x <= _TileSize) {//ABD
-                                                           //y=(yb*x+yd*z)/l
-                    deltaY = (hd.x * rootLPos.x + hd.z * rootLPos.z) / _TileSize;
-                }
-                else {//CBD
-                      //C(0, 0, 0)  B(0, hd.x - hd.y, -_TileSize)  D(-_TileSize, hd.z - hd.y, 0)
-                      //(rootLPos.x - _TileSize, ?, rootLPos.z - _TileSize)
-                      //y'=-(yd'*x'+yb'*z')/l
-                    deltaY = -((hd.z - hd.y)*(rootLPos.x - _TileSize) + (hd.x - hd.y) * (rootLPos.z - _TileSize))
-                        / _TileSize + hd.y;
-                }
-                return rootLPos + float3(0, deltaY, 0);
+                TerrainBilinear(hd, rootLPos.xyz);
+                return rootLPos;
             }
 
             v2f vert (appdata v, uint instanceID : SV_InstanceID)
@@ -170,7 +166,8 @@
                 float3 worldPosition = worldStartPos + localPosition;
                 float3 worldNormal = v.normal;
 
-
+                float3 hdi= setupHDI(index, patchIndex);
+                o.test = index/70.0;
                 o.pos = mul(UNITY_MATRIX_VP, float4(worldPosition, 1.0f));
                 return o;
             }
@@ -179,7 +176,7 @@
 
             fixed4 frag (v2f i) : SV_Target
             {
-                //return float4(i.test,1);
+                return float4(i.test,1);
                 fixed4 color = tex2D(_MainTex, i.uv);
                 fixed4 alpha = tex2D(_AlphaTex, i.uv);
                 half3 worldNormal = UnityObjectToWorldNormal(i.normal);
