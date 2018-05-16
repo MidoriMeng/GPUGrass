@@ -19,23 +19,12 @@ public class ExampleClass : MonoBehaviour {
     }
 
     void Update() {
-
         // Update starting position buffer
         if (cachedInstanceCount != instanceCount)
             UpdateBuffers();
 
-        // Pad input
-        if (Input.GetAxisRaw("Horizontal") != 0.0f)
-            instanceCount = (int)Mathf.Clamp(instanceCount + Input.GetAxis("Horizontal") * 40000, 1.0f, 10000);
-
         // Render
         Graphics.DrawMeshInstancedIndirect(grassMesh, 0, instanceMaterial, new Bounds(Vector3.zero, new Vector3(100.0f, 100.0f, 100.0f)), argsBuffer);
-    }
-
-    void OnGUI() {
-
-        GUI.Label(new Rect(265, 25, 200, 30), "Instance Count: " + instanceCount.ToString());
-        instanceCount = (int)GUI.HorizontalSlider(new Rect(25, 20, 200, 30), (float)instanceCount, 1.0f, 10000);
     }
 
     void UpdateBuffers() {

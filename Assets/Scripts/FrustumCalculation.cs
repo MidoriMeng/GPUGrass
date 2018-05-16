@@ -30,7 +30,9 @@ public class FrustumCalculation {
         Vector3 vec = camera.transform.position, widthDelta = camera.transform.right * width;
         vec -= widthDelta;
         vec += (camera.transform.forward * camera.farClipPlane);
-        frustum[0] = camera.transform.position; frustum[1] = vec; frustum[2] = vec + 2 * widthDelta;
+        frustum[0] = camera.transform.position - camera.transform.forward * 5;
+        frustum[1] = vec - camera.transform.right * 3;
+        frustum[2] = vec + 2 * widthDelta + camera.transform.right * 6;
         #endregion
         Bounds camBound = new Bounds(frustum[0], Vector3.zero);//相机包围盒
         for (int i = 1; i < frustum.Length; i++) {

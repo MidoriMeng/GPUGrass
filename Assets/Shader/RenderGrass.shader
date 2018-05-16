@@ -1,12 +1,19 @@
 ﻿      Shader "Instanced/renderGrass" {
     Properties {
         _MainTex ("Albedo (RGB)", 2D) = "white" {}
+        _AlphaTex("Alpha (A)", 2D) = "white" {}
+        _Height("Grass Height", float) = 3
+        _Width("Grass Width", range(0, 0.1)) = 0.05
+        _SectionCount("section count", int) = 5
     }
+
     SubShader {
 
         Pass {
 
             Tags {"LightMode"="ForwardBase"}
+            AlphaToMask On
+            Cull Off
 
             CGPROGRAM
 
@@ -103,8 +110,8 @@
                     height = patchInfo.height * _Height;
 
                 //计算
-                //return 1 or -1          //
-                float4 bladeOffset = float4((fmod(vertIndex, 2) * 2 - 1) * _Width, uvv *height, 0, 0);
+                float4 bladeOffset = float4(
+                    (fmod(vertIndex, 2) * 2 - 1) * _Width, uvv *height, 0, 0);
 
                 //风
                 float3 windVec = float3(1, 0, 0);
@@ -116,7 +123,7 @@
                 //blade swinging
 
                 float sin, cos;
-                sincos(dir, /*out*/ sin, /*out*/ cos);
+                sincos(dir, sin, cos);
                 bladeOffset = float4(bladeOffset.x*cos + bladeOffset.z*sin,
                     bladeOffset.y,
                     -bladeOffset.x*sin + bladeOffset.z*cos, 0);
@@ -156,18 +163,19 @@
                 //test
                 float3 localPosition = 0;
                 //localPosition += float3(bladeIndex, 0, bladeIndex / 63);//local root pos
-                localPosition += float3(vertIndex % 2/10.0, vertIndex / 2/5.0, 0);
+                //localPosition += float3(vertIndex % 2/10.0, vertIndex / 2/5.0, 0);
                 
                 localPosition += getLocalRootPos(index, v.vertex.xyz, patchIndex);
+                localPosition += getBladeOffset(index, v.vertex.xyz, v.uv.y, patchIndex);
 
                 float4 worldStartPos = getTerrainPos(index.xz);
-                //localPosition += getLocalRootPos(index, v.vertex.xyz, patchIndex);
-                //localPosition += getBladeOffset(index, v.vertex.xyz, v.uv.y, patchIndex);
                 float3 worldPosition = worldStartPos + localPosition;
                 float3 worldNormal = v.normal;
 
                 float3 hdi= setupHDI(index, patchIndex);
                 o.test = index/70.0;
+                o.uv = TRANSFORM_TEX(v.uv, _MainTex);
+                o.normal = UnityObjectToWorldNormal(v.normal);
                 o.pos = mul(UNITY_MATRIX_VP, float4(worldPosition, 1.0f));
                 return o;
             }
@@ -176,7 +184,6 @@
 
             fixed4 frag (v2f i) : SV_Target
             {
-                return float4(i.test,1);
                 fixed4 color = tex2D(_MainTex, i.uv);
                 fixed4 alpha = tex2D(_AlphaTex, i.uv);
                 half3 worldNormal = UnityObjectToWorldNormal(i.normal);
@@ -194,7 +201,8 @@
                 fixed3 specularLight = pow(saturate(dot(worldNormal, halfVector)), 15) * _LightColor0;
 
                 light = ambient + diffuseLight + specularLight;
-                return float4(color.rgb * light, alpha.g);
+                //return float4(light,1);
+                return float4(color.rgb * light, alpha.r);
             }
 
             ENDCG
