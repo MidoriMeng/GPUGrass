@@ -13,6 +13,7 @@ public class RealtimeLawnSystem : MonoBehaviour {
     //grass
     public Texture2D grassDensityMap;
     public int grassAmountPerTile = 64;//实际渲染时每个Tile内最多的草叶数量
+    public int minGrassPerTile = 0;
     public int pregenerateGrassAmount = 1023;//预生成Patch草体总长度
     public Material grassMaterial;
     //terrain
@@ -32,7 +33,6 @@ public class RealtimeLawnSystem : MonoBehaviour {
 
     //test
     Vector3[] poses;
-    public Material testMat;
 
     void Awake() {
         sizeBuffer = new ComputeBuffer(6, sizeof(float));
@@ -64,9 +64,6 @@ public class RealtimeLawnSystem : MonoBehaviour {
 
         grassMaterial.SetInt("grassAmountPerTile", grassAmountPerTile);
         grassMaterial.SetInt("pregenerateGrassAmount", pregenerateGrassAmount);
-
-        testMat.SetInt("grassAmountPerTile", grassAmountPerTile);
-        testMat.SetInt("pregenerateGrassAmount", pregenerateGrassAmount);
 
         //test
         //testMat.SetBuffer("renderPosAppend", renderPosAppendBuffer);
@@ -110,15 +107,20 @@ public class RealtimeLawnSystem : MonoBehaviour {
         if (counterBuffer != null)
             counterBuffer.Release();
         counterBuffer = new ComputeBuffer(1, sizeof(uint), ComputeBufferType.Counter);
-        counterBuffer.SetCounterValue(0);
+        counterBuffer.SetCounterValue(10);
         frustumCalc.SetBuffer("counter", counterBuffer);
 
-
+        //更新LOD用数据
+        grassMaterial.SetInt("maxGrassCount", grassAmountPerTile);
+        grassMaterial.SetInt("minGrassCount", minGrassPerTile);
+        grassMaterial.SetFloat("zFar", Camera.main.farClipPlane);
+        Vector3 pos = Camera.main.transform.position;
+        grassMaterial.SetVector("camPos", new Vector4(pos.x,pos.y,pos.z,0));
 
         frustumCalc.RunComputeShader();
         //render grass,TODO: LOD 64 32 16
-        /*Graphics.DrawMeshInstancedIndirect(grassMesh,
-            0, grassGen.grassMaterial, instanceBound, argsBuffer);*/
+        Graphics.DrawMeshInstancedIndirect(grassMesh,
+            0, grassGen.grassMaterial, instanceBound, argsBuffer);
 
         //test
         /*uint[] argNum = { 0, 0, 0, 0, 0 };
@@ -139,6 +141,7 @@ public class RealtimeLawnSystem : MonoBehaviour {
         /*uint x, y, z;//test
         frustumCalcShader.GetKernelThreadGroupSizes(frustumKernel,out x, out y, out z);//8,8,1
         Debug.Log(x + " " + y + " " + z);*/
+
     }
 
     private void OnDrawGizmos() {

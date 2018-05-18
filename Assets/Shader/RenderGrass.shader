@@ -4,6 +4,7 @@
         _AlphaTex("Alpha (A)", 2D) = "white" {}
         _Height("Grass Height", float) = 3
         _Width("Grass Width", range(0, 0.1)) = 0.05
+        //zFar("zFar",float) = 0
         _SectionCount("section count", int) = 5
     }
 
@@ -62,6 +63,10 @@
 
             static const float oscillateDelta = 0.05;
             static const float PI = 3.14159;
+
+            int maxGrassCount, minGrassCount;
+            float zFar;
+            float4 camPos;
 
 
             float4 _patchRootsPosDir[MAX_PATCH_SIZE];//TODO
@@ -149,18 +154,27 @@
             {
                 v2f o;
                 UNITY_INITIALIZE_OUTPUT(v2f, o);
+
             #if SHADER_TARGET >= 45
                 float3 index = renderPosAppend[instanceID];
             #else
                 float3 index = 0;
             #endif
-                //float4 hdi = setupHDI(index);
-                uint bladeIndex = v.vertex.x;//0~63
-                uint vertIndex = v.vertex.y;//0~11
+
+
+                int bladeIndex = v.vertex.x;//0~63
+                int vertIndex = v.vertex.y;//0~11
                 GrassData patchInfo = _patchData[bladeIndex];
                 uint patchIndex; setupHDI(index, patchIndex);
+                float4 worldStartPos = getTerrainPos(index.xz);
+                //grass density
+                //lod
+                float dist = abs(distance(camPos, worldStartPos.xyz));
+                int lodCount = (minGrassCount - maxGrassCount) / zFar * dist + maxGrassCount - 1;
+                if (bladeIndex > lodCount) {
+                    return o;
+                }
 
-                //test
                 float3 localPosition = 0;
                 //localPosition += float3(bladeIndex, 0, bladeIndex / 63);//local root pos
                 //localPosition += float3(vertIndex % 2/10.0, vertIndex / 2/5.0, 0);
@@ -168,15 +182,14 @@
                 localPosition += getLocalRootPos(index, v.vertex.xyz, patchIndex);
                 localPosition += getBladeOffset(index, v.vertex.xyz, v.uv.y, patchIndex);
 
-                float4 worldStartPos = getTerrainPos(index.xz);
                 float3 worldPosition = worldStartPos + localPosition;
                 float3 worldNormal = v.normal;
 
                 float3 hdi= setupHDI(index, patchIndex);
-                o.test = index/70.0;
                 o.uv = TRANSFORM_TEX(v.uv, _MainTex);
                 o.normal = UnityObjectToWorldNormal(v.normal);
                 o.pos = mul(UNITY_MATRIX_VP, float4(worldPosition, 1.0f));
+                o.test = lodCount;
                 return o;
             }
 
@@ -184,6 +197,7 @@
 
             fixed4 frag (v2f i) : SV_Target
             {
+                //return float4(i.test<0,1);
                 fixed4 color = tex2D(_MainTex, i.uv);
                 fixed4 alpha = tex2D(_AlphaTex, i.uv);
                 half3 worldNormal = UnityObjectToWorldNormal(i.normal);

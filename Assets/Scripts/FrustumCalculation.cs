@@ -85,6 +85,16 @@ public class FrustumCalculation {
             texSize.y / threadGroupSize.y, 1);
     }
 
+    public float GetCamDistance(Camera camera) {
+        float halfFOV = (camera.fieldOfView * 0.5f) * Mathf.Deg2Rad;
+        float height = camera.farClipPlane * Mathf.Tan(halfFOV);
+        float width = height * camera.aspect;
+        Vector3 vec = camera.transform.position, widthDelta = camera.transform.right * width;
+        vec -= widthDelta;
+        vec += (camera.transform.forward * camera.farClipPlane);
+        return (camera.transform.forward * camera.farClipPlane - widthDelta).magnitude;
+    }
+
     public FrustumCalculation(ComputeShader shader, TerrainBuilder t) {
         tBuilder = t; calcShader = shader;
         //setup
