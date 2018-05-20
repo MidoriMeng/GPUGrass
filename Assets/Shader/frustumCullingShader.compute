@@ -60,7 +60,7 @@ void FrustumCulling(uint3 id : SV_DispatchThreadID)
         //startPos 0
         //renderPosAppend.Append(threadSize);
     }
-
+    //GroupMemoryBarrierWithGroupSync();
     //indirectDataBuffer[0] = 0;
     //testTexture[id.xy] = float4((id * _TileSize).xy, hasGrass, 0);
     //indirectDataBuffer[1] = indirectDataBuffer[1]+ hasGrass;

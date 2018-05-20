@@ -65,6 +65,10 @@ public class RealtimeLawnSystem : MonoBehaviour {
         grassMaterial.SetInt("grassAmountPerTile", grassAmountPerTile);
         grassMaterial.SetInt("pregenerateGrassAmount", pregenerateGrassAmount);
 
+        argsBuffer = new ComputeBuffer(1, sizeof(uint) * 5,
+            ComputeBufferType.IndirectArguments);
+        counterBuffer = new ComputeBuffer(1, sizeof(uint), ComputeBufferType.Counter);
+
         //test
         //testMat.SetBuffer("renderPosAppend", renderPosAppendBuffer);
     }
@@ -77,37 +81,36 @@ public class RealtimeLawnSystem : MonoBehaviour {
         //更新sizeBuffer:场景大小、检测面积大小、检测起始点
         float[] sizeBufferData = { heightMap.width,heightMap.height,
         frustumSize.x,frustumSize.y,frustumSize.z,frustumSize.w};
-        if (sizeBuffer != null)
+        /*if (sizeBuffer != null)
             sizeBuffer.Release();
-        sizeBuffer = new ComputeBuffer(6, sizeof(float));
+        sizeBuffer = new ComputeBuffer(6, sizeof(float));*/
         sizeBuffer.SetData(sizeBufferData);
-        //Shader.SetGlobalBuffer("sizeBuffer", sizeBuffer);
         frustumCalc.SetBuffer("sizeBuffer", sizeBuffer);
 
         //更新buffer: indirect argument
-        if (argsBuffer != null)
-            argsBuffer.Release();
-        uint meshIndicesNum = (uint)grassMesh.vertices.Length;
+        uint meshIndicesNum = grassMesh.GetIndexCount(0);
         uint[] args = new uint[5] { meshIndicesNum, 0, 0, 0, 0 };
+        /*if (argsBuffer != null)
+            argsBuffer.Release();
         argsBuffer = new ComputeBuffer(1, sizeof(uint)*5,
-            ComputeBufferType.IndirectArguments);
+            ComputeBufferType.IndirectArguments);*/
         argsBuffer.SetData(args);
         frustumCalc.SetBuffer("indirectDataBuffer", argsBuffer);
 
         //重新renderPosAppendBuffer
         if (renderPosAppendBuffer != null)
             renderPosAppendBuffer.Release();
-        renderPosAppendBuffer = new ComputeBuffer(/*maxTileRenderCount*/16384,
+        renderPosAppendBuffer = new ComputeBuffer(2048,
             sizeof(float) * 3, ComputeBufferType.Append);
         renderPosAppendBuffer.SetCounterValue(0);
         frustumCalc.SetBuffer("renderPosAppend", renderPosAppendBuffer);
         Shader.SetGlobalBuffer("renderPosAppend", renderPosAppendBuffer);
 
         //更新counter
-        if (counterBuffer != null)
+        /*if (counterBuffer != null)
             counterBuffer.Release();
-        counterBuffer = new ComputeBuffer(1, sizeof(uint), ComputeBufferType.Counter);
-        counterBuffer.SetCounterValue(10);
+        counterBuffer = new ComputeBuffer(1, sizeof(uint), ComputeBufferType.Counter);*/
+        counterBuffer.SetCounterValue(20);
         frustumCalc.SetBuffer("counter", counterBuffer);
 
         //更新LOD用数据
