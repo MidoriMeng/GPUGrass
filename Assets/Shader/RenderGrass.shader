@@ -201,8 +201,9 @@
                 //ambient = UNITY_LIGHTMODEL_AMBIENT.xyz;
 
                 //diffuse
-                fixed halfLambert = saturate(dot(worldNormal, UnityWorldSpaceLightDir(i.pos)))*0.5 + 0.5;
-                fixed3 diffuseLight = halfLambert * _LightColor0;
+                fixed lambert = saturate(abs(dot(worldNormal, UnityWorldSpaceLightDir(i.pos))));
+                lambert = lambert * 0.5 + 0.5;//half lambert
+                fixed3 diffuseLight = lambert * _LightColor0;
                 //fixed3 worldLightDir = UnityWorldSpaceLightDir(i.pos);
                 //diffuseLight= _LightColor0.rgb*color.rgb*saturate(dot(worldNormal,worldLightDir))
 
