@@ -10,6 +10,7 @@ struct TerrainData {
 
 //RWStructuredBuffer<TerrainData> terrainDataBuffer;
 Texture2D<float> terrainHeightTex;
+Texture2D<float> terrainDensityTex;
 float terrainHeight;
 //float4 _FrustumStartPosI;//每帧更新，视锥体块的起点
 RWStructuredBuffer<uint> indirectDataBuffer;
@@ -33,6 +34,10 @@ float4 getTerrainPos(int2 id) {
     int flatid = flattenId(id, terrainSize);
     return float4(id.x*_TileSize, terrainDataBuffer[flatid].height, id.y*_TileSize, 0);
     */
+}
+
+float getTerrainDensity(int2 id) {
+    return terrainDensityTex[id*_TileSize];
 }
 
 int2 getPosIndex(float2 pos) {

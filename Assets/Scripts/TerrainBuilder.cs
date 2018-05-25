@@ -4,6 +4,7 @@ using UnityEngine;
 
 public class TerrainBuilder {
     private Texture2D heightMap;
+
     public float terrainHeight = 5f;
     public const int PATCH_SIZE = 2;//Patch的边长
     private Material terrainMat;
@@ -24,13 +25,12 @@ public class TerrainBuilder {
         //生成地形
         List<Vector3>  vertices = new List<Vector3>();
         List<int> triangles = new List<int>();
-
         for (int i = 0; i < heightMap.width; i++) {
             for (int j = 0; j < heightMap.height; j++) {
                 //vertices
                 vertices.Add(new Vector3(
                     i * terrainScale,
-                    heightMap.GetPixel(i, j).grayscale * terrainHeight,
+                    heightMap.GetPixel(i, j).r * terrainHeight,
                     j * terrainScale));
                 if (i == 0 || j == 0)
                     continue;
@@ -78,7 +78,7 @@ public class TerrainBuilder {
         return terrainDataBuffer;
     }*/
 
-    public Texture BuildTerrainDataTexture() {
+    public Texture GetTerrainHeightTexture() {
         /*RenderTexture res = new RenderTexture(
             heightMap.width, heightMap.height, 24);
         Graphics.Blit(heightMap, res);*/

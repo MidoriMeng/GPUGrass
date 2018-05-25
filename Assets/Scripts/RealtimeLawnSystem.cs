@@ -4,7 +4,6 @@ using UnityEngine;
 
 public class RealtimeLawnSystem : MonoBehaviour {
     //all
-    private int maxTileRenderCount = 1024;
     private ComputeBuffer sizeBuffer;
     private ComputeBuffer renderPosAppendBuffer;
     private ComputeBuffer counterBuffer;
@@ -53,9 +52,11 @@ public class RealtimeLawnSystem : MonoBehaviour {
         grassGen.PregenerateGrassInfo();
 
         //terrain data buffer
-        Texture terrainTex = terrainBuilder.BuildTerrainDataTexture();
+        Texture terrainTex = terrainBuilder.GetTerrainHeightTexture();
+        Texture densityTex = grassGen.GetTerrainDensityTexture();
         Shader.SetGlobalTexture("terrainHeightTex", terrainTex);
         frustumCalc.SetTextureFromGlobal("terrainHeightTex");
+        grassMaterial.SetTexture("terrainDensityTex", densityTex);
         //frustumCalc.SetBuffer("terrainDataBuffer", terrainBuffer);
         //testMat.SetBuffer("terrainDataBuffer", terrainBuffer);
 

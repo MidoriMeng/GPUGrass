@@ -265,7 +265,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   calcShader: {fileID: 7200000, guid: cb776b2ebc6643742b05d89b6898432b, type: 3}
-  grassDensityMap: {fileID: 0}
+  grassDensityMap: {fileID: 2800000, guid: 3155b38f8ed76534cb5a29a4fbe99034, type: 3}
   grassAmountPerTile: 256
   minGrassPerTile: 0
   pregenerateGrassAmount: 1023

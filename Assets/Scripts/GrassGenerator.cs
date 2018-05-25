@@ -96,6 +96,8 @@ public class GrassGenerator {
         this.patchSize = patchSize;
     }
 
+    public Texture GetTerrainDensityTexture() { return grassDensityMap; }
+
     public void ReleaseBufer() {
         grassBuffer.Release();
     }

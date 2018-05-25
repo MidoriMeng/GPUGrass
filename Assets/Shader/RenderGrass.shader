@@ -162,6 +162,8 @@
                 float3 normal = 0;
                 float test;
                 //grass density
+                fixed density = patchInfo.density;
+                if (patchInfo.density > getTerrainDensity(index.xz)) { return o; }
                 //lod
                 float dist = abs(distance(camPos, worldStartPos.xyz));
                 int lodCount = (minGrassCount - maxGrassCount) / zFar * dist + maxGrassCount - 1;
@@ -180,7 +182,7 @@
                 o.uv = TRANSFORM_TEX(v.uv, _MainTex);
                 o.pos = mul(UNITY_MATRIX_VP, float4(worldPosition, 1.0f));
                 o.normal = normal;
-                o.test = test;
+                o.test = index / 128.0;// getTerrainDensity(index.xy);
                 return o;
             }
 
