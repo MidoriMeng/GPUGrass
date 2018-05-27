@@ -173,7 +173,7 @@ public class RealtimeLawnSystem : MonoBehaviour {
         RenderTexture data = new RenderTexture(128,
             bladeSectionCountMax - bladeSectionCountMin + 1,
             0, RenderTextureFormat.ARGB32);
-        data.volumeDepth = bladeSectionCountMax;
+        data.volumeDepth = bladeSectionCountMax + 1;
         data.dimension = UnityEngine.Rendering.TextureDimension.Tex3D;
         data.enableRandomWrite = true;
         data.Create();

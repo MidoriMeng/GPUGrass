@@ -58,7 +58,7 @@
 
             float _Height;//草的高度
             float _Width;//草的宽度
-            int _SectionCount;//草叶的分段数
+            int _minSection,_maxSection, _curSection;//草叶的分段数
 
             static const float oscillateDelta = 0.05;
             static const float PI = 3.14159;
@@ -103,7 +103,9 @@
                 uint vertIndex = vertex.y;//0~11
                 float density = patchInfo.density;
                 float4 rootLPos = patchInfo.rootDir.xyzz;
+                int secIndex = vertIndex / 2;
                 float3 ee, ew, en;
+                float sin, cos;
 
                 float dir = patchInfo.rootDir.w * 2 * PI,
                     height = patchInfo.height * _Height;
@@ -125,10 +127,13 @@
                 float k2 = -1 / yo;
                 normal = float3(0, -k2, -1);
                 bladeOffset.z += deltaZ;
-                //ee=
+                /*sincos()
+                ee=*/
+                //new bending
+                float bendTheta = 60.5;
+                float2 cossinSum = mathData[float3(floor(bendTheta), _curSection - _minSection, secIndex)];
                 
                 //blade swinging
-                float sin, cos;
                 sincos(dir, sin, cos);
                 bladeOffset = float3(bladeOffset.x*cos + bladeOffset.z*sin,
                     bladeOffset.y,
