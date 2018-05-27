@@ -50,3 +50,59 @@ int2 GetConstrainedTileIndex(int2 index) {
     res.y = clamp(index.y, 0, sizeBuffer[3]-2);
     return res;
 }
+
+///theta [0,2PI]
+float3 RotateArbitraryLine(float3 v1, float3 v2, float3 pt, float theta)
+{
+    float3 result = (float3)0;
+    float a = v1.x;
+    float b = v1.y;
+    float c = v1.z;
+
+    float3 p = v2 - v1;
+    p = normalize(p);//D3DXVec3Normalize(&p, &p);
+    float u = p.x;
+    float v = p.y;
+    float w = p.z;
+
+    float uu = u * u;
+    float uv = u * v;
+    float uw = u * w;
+    float vv = v * v;
+    float vw = v * w;
+    float ww = w * w;
+    float au = a * u;
+    float av = a * v;
+    float aw = a * w;
+    float bu = b * u;
+    float bv = b * v;
+    float bw = b * w;
+    float cu = c * u;
+    float cv = c * v;
+    float cw = c * w;
+
+    float sintheta, costheta;
+    sincos(theta, sintheta, costheta);
+
+    float4x4 mat;
+    mat._m00 = uu + (vv + ww) * costheta;
+    mat._m01 = uv * (1 - costheta) + w * sintheta;
+    mat._m02 = uw * (1 - costheta) - v * sintheta;
+    mat._m03 = 0;
+
+    mat._m10 = uv * (1 - costheta) - w * sintheta;
+    mat._m11 = vv + (uu + ww) * costheta;
+    mat._m12 = vw * (1 - costheta) + u * sintheta;
+    mat._m13 = 0;
+
+    mat._m20 = uw * (1 - costheta) + v * sintheta;
+    mat._m21 = vw * (1 - costheta) - u * sintheta;
+    mat._m22 = ww + (uu + vv) * costheta;
+    mat._m23 = 0;
+
+    mat._m30 = (a * (vv + ww) - u * (bv + cw)) * (1 - costheta) + (bw - cv) * sintheta;
+    mat._m31 = (b * (uu + ww) - v * (au + cw)) * (1 - costheta) + (cu - aw) * sintheta;
+    mat._m32 = (c * (uu + vv) - w * (au + bv)) * (1 - costheta) + (av - bu) * sintheta;
+    mat._m33 = 1;
+    return mul(mat, float4(pt,1.0)).xyz;
+}

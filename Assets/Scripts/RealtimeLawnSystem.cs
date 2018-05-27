@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 public class RealtimeLawnSystem : MonoBehaviour {
+    public ComputeShader mathShader;
     //all
     private ComputeBuffer sizeBuffer;
     private ComputeBuffer renderPosAppendBuffer;
@@ -15,6 +16,8 @@ public class RealtimeLawnSystem : MonoBehaviour {
     public int minGrassPerTile = 0;
     public int pregenerateGrassAmount = 1023;//预生成Patch草体总长度
     public Material grassMaterial;
+    public int bladeSectionCountMax;
+    public int bladeSectionCountMin;
     //terrain
     public Texture2D heightMap;
     public float terrainHeight = 5f;
@@ -34,6 +37,7 @@ public class RealtimeLawnSystem : MonoBehaviour {
     Vector3[] poses;
 
     void Awake() {
+        //GenMathData();
         sizeBuffer = new ComputeBuffer(6, sizeof(float));
         float[] sizeBufferData = new float[6];
         sizeBuffer.SetData(sizeBufferData);
@@ -44,7 +48,7 @@ public class RealtimeLawnSystem : MonoBehaviour {
         if (!terrain)
             terrainBuilder.BuildTerrain(transform);
         //视锥体
-        frustumCalc = new FrustumCalculation(calcShader, terrainBuilder);        
+        frustumCalc = new FrustumCalculation(calcShader, terrainBuilder);
         //草叶
         grassGen = new GrassGenerator(grassDensityMap, grassAmountPerTile,
             pregenerateGrassAmount, grassMaterial, TerrainBuilder.PATCH_SIZE);
@@ -119,7 +123,7 @@ public class RealtimeLawnSystem : MonoBehaviour {
         grassMaterial.SetInt("minGrassCount", minGrassPerTile);
         grassMaterial.SetFloat("zFar", Camera.main.farClipPlane);
         Vector3 pos = Camera.main.transform.position;
-        grassMaterial.SetVector("camPos", new Vector4(pos.x,pos.y,pos.z,0));
+        grassMaterial.SetVector("camPos", new Vector4(pos.x, pos.y, pos.z, 0));
 
         frustumCalc.RunComputeShader();
         //render grass,TODO: LOD 64 32 16
@@ -163,6 +167,33 @@ public class RealtimeLawnSystem : MonoBehaviour {
         if (terrain)
             DestroyImmediate(terrain);
         terrainBuilder.BuildTerrain(transform);
+    }
+
+    public void GenMathData() {
+        RenderTexture data = new RenderTexture(128,
+            bladeSectionCountMax - bladeSectionCountMin + 1,
+            0, RenderTextureFormat.ARGB32);
+        data.volumeDepth = bladeSectionCountMax;
+        data.dimension = UnityEngine.Rendering.TextureDimension.Tex3D;
+        data.enableRandomWrite = true;
+        data.Create();
+        
+        int kernel = mathShader.FindKernel("GenMathData");
+        mathShader.SetTexture(kernel, "Result", data);
+        mathShader.Dispatch(kernel, 128 / 8, data.width, data.volumeDepth);
+        grassMaterial.SetTexture("mathData", data);
+        /*        if (SystemInfo.SupportsTextureFormat(TextureFormat.RFloat)) {
+                    Texture3D data = new Texture3D(90,
+                        bladeSectionCountMax - bladeSectionCountMin + 1,
+                        bladeSectionCountMax, TextureFormat.RFloat, false);
+                    int kernel = mathShader.FindKernel("GenMathData");
+                    mathShader.SetTexture(kernel, "Result", data);
+
+                } else {
+                    Debug.Log("RFloat texture not supported!");
+                }*/
+
+
     }
 
     private void OnDisable() {

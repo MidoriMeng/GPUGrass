@@ -264,12 +264,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3e0b9ee2126ca3f4cae150aa0a5a39cf, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  mathShader: {fileID: 7200000, guid: 1fa46e3f512f8bc4aa5812c67edbf500, type: 3}
   calcShader: {fileID: 7200000, guid: cb776b2ebc6643742b05d89b6898432b, type: 3}
   grassDensityMap: {fileID: 2800000, guid: 3155b38f8ed76534cb5a29a4fbe99034, type: 3}
   grassAmountPerTile: 256
   minGrassPerTile: 0
   pregenerateGrassAmount: 1023
   grassMaterial: {fileID: 2100000, guid: 6743cdcd44ca4f1489dd4e35a3b692c2, type: 2}
+  bladeSectionCountMax: 5
+  bladeSectionCountMin: 2
   heightMap: {fileID: 2800000, guid: 45e64b3e874365949ae291ac5232e39c, type: 3}
   terrainHeight: 15
   terrainMat: {fileID: 2100000, guid: b50516405a76f954aaca83efa3b9dfd0, type: 2}

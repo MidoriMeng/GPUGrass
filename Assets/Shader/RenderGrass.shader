@@ -67,6 +67,7 @@
             float zFar;
             float4 camPos;
 
+            Texture3D<float2> mathData;
 
             StructuredBuffer<GrassData> _patchData;
             int pregenerateGrassAmount;
@@ -102,17 +103,20 @@
                 uint vertIndex = vertex.y;//0~11
                 float density = patchInfo.density;
                 float4 rootLPos = patchInfo.rootDir.xyzz;
+                float3 ee, ew, en;
 
                 float dir = patchInfo.rootDir.w * 2 * PI,
                     height = patchInfo.height * _Height;
                 normal = float3(0, 0, 1); test = 0;//
-                //计算
-                float4 bladeOffset = float4(
-                    (fmod(vertIndex, 2) * 2 - 1) * _Width, uvv *height, 0, 0);
+                //基础形态：叶片在xy平面
+                float3 bladeOffset = float3(
+                    (fmod(vertIndex, 2) * 2 - 1) * _Width, uvv *height, 0);
+                ee = float3(0, 1, 0); ew = float3(1, 0, 0), en = cross(ee, ew);
 
                 //风
-                float3 windVec = float3(1, 0, 0);
-                //blade bending:导致5段变4段
+                //float3 windVec = float3(1, 0, 0);
+
+                //blade bending
                 float c = 1.2;//(0,0), (bending, c*height)
                 float bending = fmod(patchIndex, 3)*0.5 + 0.2;
                 float a = -c * height / (bending * bending), b = 2 * c * height / bending;
@@ -121,16 +125,21 @@
                 float k2 = -1 / yo;
                 normal = float3(0, -k2, -1);
                 bladeOffset.z += deltaZ;
+                //ee=
                 
                 //blade swinging
                 float sin, cos;
                 sincos(dir, sin, cos);
-                bladeOffset = float4(bladeOffset.x*cos + bladeOffset.z*sin,
+                bladeOffset = float3(bladeOffset.x*cos + bladeOffset.z*sin,
                     bladeOffset.y,
-                    -bladeOffset.x*sin + bladeOffset.z*cos, 0);
+                    -bladeOffset.x*sin + bladeOffset.z*cos);
                 normal = float3(normal.x*cos + normal.z*sin,
                     normal.y,
                     -normal.x*sin + normal.z*cos);
+                //blade twisting
+                float tangle = PI / 3.0;//0~2pi
+                //bladeOffset= RotateArbitraryLine()
+
                 normal = normalize(normal);
                 test = patchInfo.rootDir.w;
                 return bladeOffset;

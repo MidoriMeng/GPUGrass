@@ -1,0 +1,20 @@
+﻿// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel GenMathData
+
+// Create a RenderTexture with enableRandomWrite flag and set it
+// with cs.SetTexture
+RWTexture3D<float2> Result;
+int minSection;
+
+[numthreads(8,1,1)]
+void GenMathData (uint3 id : SV_DispatchThreadID)
+{
+    float sin, cos, theta = radians(id.x);
+    float sumSin = 0, sumCos = 0;
+    for (uint i = 0; i < id.z; i++) {
+        sincos((i+1)*theta/(id.y+minSection), sin, cos);
+        sumSin += sin; sumCos += cos;
+    }
+    Result[id.xyz] = float2(sumCos, sumSin);
+	//Result[id.xy] = float4(id.x & id.y, (id.x & 15)/15.0, (id.y & 15)/15.0, 0.0);
+}
