@@ -1,10 +1,13 @@
 ﻿      Shader "Instanced/renderGrass" {
     Properties {
+        _Color("Grass color", Color) = (1,1,1,1)
         _MainTex ("Albedo (RGB)", 2D) = "white" {}
         _AlphaTex("Alpha (A)", 2D) = "white" {}
         _Height("Grass Height", float) = 3
         _Width("Grass Width", range(0, 0.1)) = 0.05
         _SectionCount("section count", int) = 5
+        _Shadow("shadow density", range(0, 1)) = 0.5
+        _num("number", range(0.001,5)) = 500
     }
 
     SubShader {
@@ -25,10 +28,11 @@
             #include "UnityCG.cginc"
             #include "Data.cginc"
             #include "Lighting.cginc"
+            #include "AutoLight.cginc"
 
-        #if SHADER_TARGET >= 45
-            StructuredBuffer<float3> renderPosAppend;
-        #endif
+            #if SHADER_TARGET >= 45
+                StructuredBuffer<float3> renderPosAppend;
+            #endif
 
             struct appdata
             {
@@ -43,7 +47,10 @@
                 float4 pos : SV_POSITION;
                 float2 uv : TEXCOORD0;
                 float3 normal : TEXCOORD1;
-                float3 test: TEXCOORD2;
+                float3 bladeInfo: TEXCOORD2;
+                //float4 shadowPos:TEXCOORD3;
+                float2 test: TEXCOORD4;
+                //SHADOW_COORDS(4)
             };
 
 
@@ -54,11 +61,15 @@
 
             sampler2D _MainTex;
             sampler2D _AlphaTex;
+            sampler2D _ShadowTex;
             float4 _MainTex_ST;
+            float _num;
 
             float _Height;//草的高度
             float _Width;//草的宽度
+            float _Shadow;//阴影强度
             int _minSection,_maxSection, _curSection;//草叶的分段数
+            float4 _Color;
 
             static const float oscillateDelta = 0.05;
             static const float PI = 3.14159;
@@ -66,6 +77,8 @@
             int maxGrassCount, minGrassCount;
             float zFar;
             float4 camPos;
+
+            //sampler2D _ShadowMapTexture;
 
             Texture3D<float2> mathData;
 
@@ -91,14 +104,43 @@
                 return hdi;
             }
 
+            fixed rand(float3 value) {
+                return frac(sin(dot(value, float3(12.9898, 78.233, 45.5432))) * 43758.5453);
+            }
+
             int setRandomPatchIndex(float3 index) {
-                float random = frac(sin(dot(index.xyz, float3(12.9898, 78.233, 45.5432))) * 43758.5453);
+                float random = rand(index);
                 return (int)(random * (pregenerateGrassAmount - grassAmountPerTile));
+            }
+
+            //@UnityCG.cginc 859
+            float4 ClipSpaceShadowCasterPos(float3 wPos, float3 wNormal)
+            {
+
+                if (unity_LightShadowBias.z != 0.0)
+                {
+                    float3 wLight = normalize(UnityWorldSpaceLightDir(wPos.xyz));
+
+                    // apply normal offset bias (inset position along the normal)
+                    // bias needs to be scaled by sine between normal and light direction
+                    // (http://the-witness.net/news/2013/09/shadow-mapping-summary-part-1/)
+                    //
+                    // unity_LightShadowBias.z contains user-specified normal offset amount
+                    // scaled by world space texel size.
+
+                    float shadowCos = dot(wNormal, wLight);
+                    float shadowSine = sqrt(1 - shadowCos * shadowCos);
+                    float normalBias = unity_LightShadowBias.z * shadowSine;
+
+                    wPos.xyz -= wNormal * normalBias;
+                }
+
+                return mul(UNITY_MATRIX_VP, wPos);
             }
 
             //形成草叶形状
             float3 getBladeOffset(float3 index, float3 vertex,
-                float uvv, GrassData patchInfo, int patchIndex, out float3 normal, out float test) {
+                float uvv, GrassData patchInfo, int patchIndex, out float3 normal, out float2 basicShape) {
                 //变量准备
                 uint vertIndex = vertex.y;//0~11
                 float density = patchInfo.density;
@@ -109,10 +151,11 @@
 
                 float dir = patchInfo.rootDir.w * 2 * PI,
                     height = patchInfo.height * _Height;
-                normal = float3(0, 0, 1); test = 0;//
+                normal = float3(0, 0, 1);
                 //基础形态：叶片在xy平面
                 float3 bladeOffset = float3(
                     (fmod(vertIndex, 2) * 2 - 1) * _Width, uvv *height, 0);
+                basicShape = bladeOffset.xy;
                 ee = float3(0, 1, 0); ew = float3(1, 0, 0), en = cross(ee, ew);
 
                 //风
@@ -146,7 +189,6 @@
                 //bladeOffset= RotateArbitraryLine()
 
                 normal = normalize(normal);
-                test = patchInfo.rootDir.w;
                 return bladeOffset;
             }
 
@@ -173,8 +215,8 @@
                 int patchIndex = localBladeIndex + rand;//0~63+0~1023-64
                 GrassData patchInfo = _patchData[patchIndex];
                 float4 worldStartPos = getTerrainPos(index.xz);
-                float3 normal = 0;
-                float test;
+                float3 wNormal = 0;
+                float2 basicShape;
                 //grass density
                 fixed density = patchInfo.density;
                 if (patchInfo.density > getTerrainDensity(index.xz)) { return o; }
@@ -189,14 +231,18 @@
                 /*localPosition += float3(bladeIndex, 0, bladeIndex / 63);//local root pos
                 localPosition += float3(vertIndex % 2/10.0, vertIndex / 2/5.0, 0);*/
                 localPosition += getLocalRootPos(index, v.vertex.xyz, patchInfo);
-                localPosition += getBladeOffset(index, v.vertex.xyz, v.uv.y, patchInfo, patchIndex, normal, test);
+                float3 bladeOffset = getBladeOffset(index, v.vertex.xyz, v.uv.y, patchInfo, patchIndex, wNormal, basicShape);
+                localPosition += bladeOffset;
                 float3 worldPosition = worldStartPos + localPosition;
 
-                float3 hdi= setupHDI(index);
+                /*o.shadowPos = ClipSpaceShadowCasterPos(worldPosition, wNormal);
+                o.shadowPos = UnityApplyLinearShadowBias(o.shadowPos);*/
+
                 o.uv = TRANSFORM_TEX(v.uv, _MainTex);
                 o.pos = mul(UNITY_MATRIX_VP, float4(worldPosition, 1.0f));
-                o.normal = normal;
-                o.test = index / 128.0;// getTerrainDensity(index.xy);
+                o.normal = wNormal;
+                o.bladeInfo = float3(basicShape, patchIndex);
+                //TRANSFER_SHADOW(o)
                 return o;
             }
 
@@ -204,11 +250,26 @@
 
             fixed4 frag (v2f i) : SV_Target
             {
-                fixed4 color = tex2D(_MainTex, i.uv);
+                fixed4 color = tex2D(_MainTex, i.uv)*_Color;
+                //color.r += _yellow * i.bladeInfo.y;
                 fixed4 alpha = tex2D(_AlphaTex, i.uv);
-                //return float4(i.test, 1);
+                //fixed shadow = SHADOW_ATTENUATION(i);
+                float3 lightDir = UnityWorldSpaceLightDir(i.pos);
+                //float x = abs(i.bladeInfo.x);
+                //return float4(x.xxx, 1);
                 //return float4(abs(i.normal), alpha.r);
                 half3 worldNormal = i.normal;// UnityObjectToWorldNormal(i.normal);
+
+                //return float4(color.rgb, alpha.r);
+                //shadow
+                float2 tex;
+                tex.x= frac(i.bladeInfo.z / 102.3) +i.bladeInfo.x/ _num;
+                tex.y = i.bladeInfo.y / _Height;
+                float bladeShadow = tex2D(_ShadowTex, tex).x;
+                bladeShadow = bladeShadow * _Shadow + 1.0 - _Shadow;
+
+                //return float4(tex,0, 1);
+
                 //ads
                 fixed3 light;
 
@@ -217,9 +278,9 @@
                 //ambient = UNITY_LIGHTMODEL_AMBIENT.xyz;
 
                 //diffuse
-                fixed lambert = saturate(abs(dot(worldNormal, UnityWorldSpaceLightDir(i.pos))));
+                fixed lambert = saturate(abs(dot(worldNormal, lightDir)));
                 lambert = lambert * 0.5 + 0.5;//half lambert
-                fixed3 diffuseLight = lambert * _LightColor0;
+                fixed3 diffuseLight = lambert * _LightColor0/* * shadow*/ * bladeShadow;
                 //fixed3 worldLightDir = UnityWorldSpaceLightDir(i.pos);
                 //diffuseLight= _LightColor0.rgb*color.rgb*saturate(dot(worldNormal,worldLightDir))
 
@@ -229,9 +290,33 @@
 
                 //light = ambient + diffuseLight / 2.0 + 0.5 + specularLight;
                 light = ambient + diffuseLight  + specularLight;
-                //return float4(light, alpha.r);
                 return float4(color.rgb * light, alpha.r);
             }
+
+            ENDCG
+        }
+
+        Pass
+        {
+            Name "ShadowCaster"
+            Tags
+            { 
+                "LightMode" = "ShadowCaster" 
+                "IgnoreProjector" = "True"
+            }
+
+            ZWrite On
+
+            CGPROGRAM
+                #pragma target 3.0
+
+                #pragma shader_feature _ALPHAPREMULTIPLY_ON
+                #pragma multi_compile_shadowcaster
+
+                #pragma vertex vertShadowCaster
+                #pragma fragment fragShadowCaster
+
+                #include "UnityStandardShadow.cginc"
 
             ENDCG
         }

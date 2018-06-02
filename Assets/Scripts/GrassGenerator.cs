@@ -18,6 +18,10 @@ public class GrassGenerator {
         }
     };
 
+    public void GenShadowMap() {
+
+    }
+
     /// <summary>
     /// 预生成草地信息数组，传输给grassMaterial
     /// </summary>

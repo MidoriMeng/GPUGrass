@@ -1,9 +1,14 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class RealtimeLawnSystem : MonoBehaviour {
+    private Text fpsText;
+    private float deltaTime;
+
     public ComputeShader mathShader;
+    public Texture2D shadowTex;
     //all
     private ComputeBuffer sizeBuffer;
     private ComputeBuffer renderPosAppendBuffer;
@@ -27,7 +32,7 @@ public class RealtimeLawnSystem : MonoBehaviour {
     private GrassGenerator grassGen;
     private TerrainBuilder terrainBuilder;
     private FrustumCalculation frustumCalc;
-    public Mesh grassMesh;//for test应该改为private
+    private Mesh grassMesh;//for test应该改为private
 
     //indirect
     private ComputeBuffer argsBuffer;
@@ -74,8 +79,14 @@ public class RealtimeLawnSystem : MonoBehaviour {
             ComputeBufferType.IndirectArguments);
         counterBuffer = new ComputeBuffer(1, sizeof(uint), ComputeBufferType.Counter);
 
+        SetShadowTexture();
+
         //test
         //testMat.SetBuffer("renderPosAppend", renderPosAppendBuffer);
+    }
+
+    private void Start() {
+        fpsText = GameObject.Find("fpsText").GetComponent<Text>();
     }
 
     void Update() {
@@ -128,7 +139,7 @@ public class RealtimeLawnSystem : MonoBehaviour {
         frustumCalc.RunComputeShader();
         //render grass,TODO: LOD 64 32 16
         Graphics.DrawMeshInstancedIndirect(grassMesh,
-            0, grassGen.grassMaterial, instanceBound, argsBuffer);
+            0, grassGen.grassMaterial, instanceBound, argsBuffer,0,null, UnityEngine.Rendering.ShadowCastingMode.TwoSided);
 
         //test
         /*uint[] argNum = { 0, 0, 0, 0, 0 };
@@ -149,7 +160,13 @@ public class RealtimeLawnSystem : MonoBehaviour {
         /*uint x, y, z;//test
         frustumCalcShader.GetKernelThreadGroupSizes(frustumKernel,out x, out y, out z);//8,8,1
         Debug.Log(x + " " + y + " " + z);*/
+        ShowFPS();
+    }
 
+    private void ShowFPS() {
+        deltaTime += (Time.deltaTime - deltaTime) * 0.1f;
+        float fpsT = 1.0f / deltaTime;
+        fpsText.text = Mathf.Ceil(fpsT).ToString();
     }
 
     private void OnDrawGizmos() {
@@ -194,6 +211,10 @@ public class RealtimeLawnSystem : MonoBehaviour {
                 }*/
 
 
+    }
+
+    void SetShadowTexture() {
+        grassMaterial.SetTexture("_ShadowTex", shadowTex);
     }
 
     private void OnDisable() {

@@ -230,7 +230,7 @@ Transform:
   m_PrefabInternal: {fileID: 0}
   m_GameObject: {fileID: 519213408}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 53.187473, y: 7.64, z: 44.05863}
+  m_LocalPosition: {x: 54.862843, y: 6.8257627, z: 44.862843}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children:
   - {fileID: 2047868685}
@@ -265,9 +265,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   mathShader: {fileID: 7200000, guid: 1fa46e3f512f8bc4aa5812c67edbf500, type: 3}
+  shadowTex: {fileID: 2800000, guid: 2a8f0e42fb4ce5945a53f8a6c82435f0, type: 3}
   calcShader: {fileID: 7200000, guid: cb776b2ebc6643742b05d89b6898432b, type: 3}
   grassDensityMap: {fileID: 2800000, guid: 3155b38f8ed76534cb5a29a4fbe99034, type: 3}
-  grassAmountPerTile: 256
+  grassAmountPerTile: 512
   minGrassPerTile: 0
   pregenerateGrassAmount: 1023
   grassMaterial: {fileID: 2100000, guid: 6743cdcd44ca4f1489dd4e35a3b692c2, type: 2}
@@ -368,7 +369,7 @@ Transform:
   m_PrefabInternal: {fileID: 0}
   m_GameObject: {fileID: 1394199124}
   m_LocalRotation: {x: 0.40439868, y: -0.53010404, z: -0.43568668, w: 0.60467225}
-  m_LocalPosition: {x: 58.218983, y: 6.4070797, z: 50.676174}
+  m_LocalPosition: {x: 58.42, y: 6.89, z: 52.23}
   m_LocalScale: {x: 3, y: 3, z: 3}
   m_Children: []
   m_Father: {fileID: 0}
