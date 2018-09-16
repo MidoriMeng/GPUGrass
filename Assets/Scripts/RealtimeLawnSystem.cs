@@ -17,7 +17,7 @@ public class RealtimeLawnSystem : MonoBehaviour {
     public ComputeShader calcShader;
     //grass
     public Texture2D grassDensityMap;
-    public int grassAmountPerTile = 64;//实际渲染时每个Tile内最多的草叶数量
+    private int grassAmountPerTile = 256;//实际渲染时每个Tile内最多的草叶数量
     public int minGrassPerTile = 0;
     public int pregenerateGrassAmount = 1023;//预生成Patch草体总长度
     public Material grassMaterial;
@@ -37,9 +37,6 @@ public class RealtimeLawnSystem : MonoBehaviour {
     //indirect
     private ComputeBuffer argsBuffer;
     private Bounds instanceBound;
-
-    //test
-    Vector3[] poses;
 
     void Awake() {
         //GenMathData();
@@ -66,8 +63,6 @@ public class RealtimeLawnSystem : MonoBehaviour {
         Shader.SetGlobalTexture("terrainHeightTex", terrainTex);
         frustumCalc.SetTextureFromGlobal("terrainHeightTex");
         grassMaterial.SetTexture("terrainDensityTex", densityTex);
-        //frustumCalc.SetBuffer("terrainDataBuffer", terrainBuffer);
-        //testMat.SetBuffer("terrainDataBuffer", terrainBuffer);
 
         Shader.SetGlobalFloat("terrainHeight", terrainHeight);
         frustumCalc.SetFloat("terrainHeight", terrainHeight);
@@ -80,13 +75,12 @@ public class RealtimeLawnSystem : MonoBehaviour {
         counterBuffer = new ComputeBuffer(1, sizeof(uint), ComputeBufferType.Counter);
 
         SetShadowTexture();
-
-        //test
-        //testMat.SetBuffer("renderPosAppend", renderPosAppendBuffer);
+        
     }
 
     private void Start() {
         fpsText = GameObject.Find("fpsText").GetComponent<Text>();
+		Application.targetFrameRate = -1;
     }
 
     void Update() {
@@ -140,26 +134,7 @@ public class RealtimeLawnSystem : MonoBehaviour {
         //render grass,TODO: LOD 64 32 16
         Graphics.DrawMeshInstancedIndirect(grassMesh,
             0, grassGen.grassMaterial, instanceBound, argsBuffer,0,null, UnityEngine.Rendering.ShadowCastingMode.TwoSided);
-
-        //test
-        /*uint[] argNum = { 0, 0, 0, 0, 0 };
-        argsBuffer.GetData(argNum);
-        //poses = new Vector2[argNum[1]];*/
-        /*uint[] counter = { 0 };
-        counterBuffer.GetData(counter);
-        //poses = new Vector3[(int)(frustumSize.x * frustumSize.y)];
-        poses = new Vector3[counter[0]];
-        renderPosAppendBuffer.GetData(poses);
-        //Debug.Log(counter[0]);
-        string str = "";
-        for (int i = 0; i < poses.Length; i++) {
-            str += (poses[i] + "  ");
-        }
-        Debug.Log(str);*/
-
-        /*uint x, y, z;//test
-        frustumCalcShader.GetKernelThreadGroupSizes(frustumKernel,out x, out y, out z);//8,8,1
-        Debug.Log(x + " " + y + " " + z);*/
+        
         ShowFPS();
     }
 
@@ -169,14 +144,10 @@ public class RealtimeLawnSystem : MonoBehaviour {
         fpsText.text = Mathf.Ceil(fpsT).ToString();
     }
 
-    private void OnDrawGizmos() {
+    /*private void OnDrawGizmos() {
         Gizmos.color = Color.green;
         Gizmos.DrawWireCube(instanceBound.center, instanceBound.size);
-        /*for(int i = 0; i < poses.Length; i++) {
-            Gizmos.color = poses[i].y==1?Color.green:Color.black;
-            Gizmos.DrawCube(new Vector3(poses[i].x, 50, poses[i].z)*2, Vector3.one);
-        }*/
-    }
+    }*/
 
     public void BuildTerrainTool() {
         terrainBuilder = new TerrainBuilder(heightMap, terrainHeight, terrainMat);

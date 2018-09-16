@@ -40,30 +40,15 @@ void FrustumCulling(uint3 id : SV_DispatchThreadID)
     float2 startPos_c = GetConstrainedTileIndex(startPos);
     float2 globIndex = startPos_c + id.xy;
     int globIdFlattened = flattenId(globIndex, terrainSize);
-
     int count;
-
     uint hasGrass = PointInTriangle(frustumPosIndex[0].xy, frustumPosIndex[0].zw,
         frustumPosIndex[1].xy, globIndex);
-    //.hasGrass = hasGrass;
 
     float3 f = float3(globIndex.x, hasGrass, globIndex.y);
-    //函数被封装，只能使用条件分支
     if (hasGrass) {
-        counter[0] = counter.IncrementCounter();
+        counter[0] = counter.IncrementCounter();//函数被封装，只能使用条件分支
         indirectDataBuffer[1] = max(indirectDataBuffer[1], counter[0]);
-
-        //counter[0] = max(counter.IncrementCounter(), counter[0]);
-        //renderPosAppend.Append(float2(dat.height,dat.hasGrass));
         renderPosAppend.Append(f);
-        //renderPosAppend.Append(float2(globIdFlattened,0));
-        //startPos 0
-        //renderPosAppend.Append(threadSize);
     }
-    //GroupMemoryBarrierWithGroupSync();
-    //indirectDataBuffer[0] = 0;
-    //testTexture[id.xy] = float4((id * _TileSize).xy, hasGrass, 0);
-    //indirectDataBuffer[1] = indirectDataBuffer[1]+ hasGrass;
-    //testTexture[id.xy] = float4(1,1,1,0.5);
 }
 

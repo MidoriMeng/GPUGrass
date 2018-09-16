@@ -92,9 +92,9 @@ Material:
     - _SrcBlend: 1
     - _TileSize: 2
     - _UVSec: 0
-    - _Width: 0.0363
+    - _Width: 0.0319
     - _ZWrite: 1
-    - _num: 1
+    - _num: 1000
     - _yellow: 0.05
     m_Colors:
     - _Color: {r: 1, g: 1, b: 1, a: 1}

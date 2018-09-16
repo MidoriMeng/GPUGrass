@@ -20,8 +20,6 @@ public class FrustumCalculation {
     /// </summary>
     public Bounds PrepareCamData(Camera camera, out Vector4 threadSize) {
         Vector3[] frustum = new Vector3[3];
-        //想传6个整数，但unity的computeShader.SetInts和SetFloats有问题
-        Vector4[] frusIndex = { Vector4.zero, Vector4.zero };
         #region 获取视锥体frustum
         float halfFOV = (camera.fieldOfView * 0.5f) * Mathf.Deg2Rad;
         float height = camera.farClipPlane * Mathf.Tan(halfFOV);
@@ -47,7 +45,7 @@ public class FrustumCalculation {
         newTexSizeX = maxIndex.x - minIndex.x + 1;
         for (int i = 31; i >= 0; i--)
             if (((newTexSizeX >> i) & 1) == 1) { digit = i + 1; break; }
-        newTexSizeX = 1 << digit;//向上取整（二进制），eg: 9→16
+        newTexSizeX = 1 << digit;
         newTexSizeY = maxIndex.y - minIndex.y + 1;
         for (int i = 31; i >= 0; i--)
             if (((newTexSizeY >> i) & 1) == 1) { digit = i + 1; break; }
@@ -66,6 +64,8 @@ public class FrustumCalculation {
         #endregion
         texSize.x = newTexSizeX; texSize.y = newTexSizeY;
 
+        //想传6个整数，但unity的computeShader.SetInts和SetFloats有问题
+        Vector4[] frusIndex = { Vector4.zero, Vector4.zero };
         for (int i = 0; i < 3; i++) {
             Vector2Int t = tBuilder.GetTileIndex(frustum[i]);
             //t -= tBuilder.GetTileIndex(camBound.min);
@@ -84,16 +84,7 @@ public class FrustumCalculation {
         calcShader.Dispatch(frustumKernel, texSize.x / threadGroupSize.x,
             texSize.y / threadGroupSize.y, 1);
     }
-
-    public float GetCamDistance(Camera camera) {
-        float halfFOV = (camera.fieldOfView * 0.5f) * Mathf.Deg2Rad;
-        float height = camera.farClipPlane * Mathf.Tan(halfFOV);
-        float width = height * camera.aspect;
-        Vector3 vec = camera.transform.position, widthDelta = camera.transform.right * width;
-        vec -= widthDelta;
-        vec += (camera.transform.forward * camera.farClipPlane);
-        return (camera.transform.forward * camera.farClipPlane - widthDelta).magnitude;
-    }
+    
 
     public FrustumCalculation(ComputeShader shader, TerrainBuilder t) {
         tBuilder = t; calcShader = shader;

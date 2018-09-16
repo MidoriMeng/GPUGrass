@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+/* *emmm还没开发完*/
 public class ShadowMapRenderer : MonoBehaviour {
     RenderTexture shadowDepthTexture;
     int texResolution = 2048;

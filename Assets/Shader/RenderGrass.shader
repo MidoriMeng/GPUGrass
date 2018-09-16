@@ -7,7 +7,7 @@
         _Width("Grass Width", range(0, 0.1)) = 0.05
         _SectionCount("section count", int) = 5
         _Shadow("shadow density", range(0, 1)) = 0.5
-        _num("number", range(0.001,5)) = 500
+        _num("number", range(50,1000)) = 500
     }
 
     SubShader {
@@ -93,15 +93,6 @@
                 float yR2 = (t - input.x) / t * hd.z + input.x / t * hd.y;
                 float y = (t - input.z) / t * yR1 + input.z / t * yR2;
                 return float3(input.x, y, input.z);
-            }
-
-            float3 setupHDI(float3 index) {
-                float3 hdi;
-                float height = getTerrainPos(index.xz).y;
-                hdi.x = getTerrainPos(float2(index.x + 1, index.z)).y - height;
-                hdi.y = getTerrainPos(float2(index.x + 1, index.z + 1)).y - height;
-                hdi.z = getTerrainPos(float2(index.x, index.z + 1)).y - height;
-                return hdi;
             }
 
             fixed rand(float3 value) {
@@ -193,9 +184,13 @@
             }
 
             float3 getLocalRootPos(float3 index, float3 vertex, GrassData patchInfo) {
-                float3 hd = setupHDI(index);//height delta
+                float3 heightDelta;
+                float height = getTerrainPos(index.xz).y;
+                heightDelta.x = getTerrainPos(float2(index.x + 1, index.z)).y - height;
+                heightDelta.y = getTerrainPos(float2(index.x + 1, index.z + 1)).y - height;
+                heightDelta.z = getTerrainPos(float2(index.x, index.z + 1)).y - height;
                 float3 rootLPos = patchInfo.rootDir.xyz;
-                return TerrainBilinear(hd, rootLPos.xyz);
+                return TerrainBilinear(heightDelta, rootLPos.xyz);
             }
 
             v2f vert (appdata v, uint instanceID : SV_InstanceID)
@@ -263,7 +258,8 @@
                 //return float4(color.rgb, alpha.r);
                 //shadow
                 float2 tex;
-                tex.x= frac(i.bladeInfo.z / 102.3) +i.bladeInfo.x/ _num;
+                fixed f = frac(abs(lightDir.x) + abs(lightDir.y) + abs(lightDir.z));
+                tex.x= frac(i.bladeInfo.z * f / _num) +i.bladeInfo.x;
                 tex.y = i.bladeInfo.y / _Height;
                 float bladeShadow = tex2D(_ShadowTex, tex).x;
                 bladeShadow = bladeShadow * _Shadow + 1.0 - _Shadow;

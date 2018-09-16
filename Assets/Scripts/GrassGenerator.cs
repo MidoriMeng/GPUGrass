@@ -18,9 +18,9 @@ public class GrassGenerator {
         }
     };
 
-    public void GenShadowMap() {
+    /*public void GenShadowMap() {
 
-    }
+    }*/
 
     /// <summary>
     /// 预生成草地信息数组，传输给grassMaterial
@@ -61,12 +61,12 @@ public class GrassGenerator {
         int bladeVertexCount = (bladeSectionCount + 1) * 2;
         Vector3[] normals = new Vector3[grassAmountPerTile * bladeVertexCount];
         Vector3[] vertices = new Vector3[grassAmountPerTile * bladeVertexCount];
-        Vector2[] uv = new Vector2[grassAmountPerTile * bladeVertexCount];
+        Vector2[] uvs = new Vector2[grassAmountPerTile * bladeVertexCount];
         for (int i = 0; i < vertices.Length; i++) {
             //赋予x坐标，为了使其作为索引在gpu中读取数组信息
             vertices[i] = new Vector3(i / bladeVertexCount, i % bladeVertexCount, 0);//0-63,0-11,0
             normals[i] = -Vector3.forward;
-            uv[i] = new Vector2(i % bladeVertexCount % 2,
+            uvs[i] = new Vector2(i % bladeVertexCount % 2,
                 ((float)(i % bladeVertexCount / 2)) / bladeSectionCount);
         }
         result.vertices = vertices;
@@ -88,7 +88,7 @@ public class GrassGenerator {
         }
         result.triangles = triangles;
         result.normals = normals;
-        result.uv = uv;
+        result.uv = uvs;
         return result;
     }
 
