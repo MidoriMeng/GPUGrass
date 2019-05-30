@@ -4,4 +4,4 @@ real-time grass rendering based on GPU instancing with Unity
   
 this Unity project is a naive implementation of:  
 Zengzhi Fan , Hongwei Li , Karl Hillesland , Bin Sheng. Simulation and rendering for millions of grass blades. Proceedings of the 19th Symposium on Interactive 3D Graphics and Games. 2015  
-this project has no physics simulation
+Specifically, compares to the paper, this implementation lacks physics simulation (interactions with colliders or wind)
